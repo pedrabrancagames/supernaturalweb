@@ -1,0 +1,18 @@
+{
+  "name": "supernatural-ar",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Supernatural AR - Jogo de Realidade Aumentada",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "aframe": "^1.6.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "@vitejs/plugin-basic-ssl": "^1.1.0"
+  }
+}
