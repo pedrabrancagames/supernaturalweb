@@ -797,3 +797,313 @@ document.addEventListener('DOMContentLoaded', () => {
         hud.classList.remove('visible');
     });
 });
+
+// ============================================
+// SISTEMA DE GEOLOCALIZAÇÃO
+// ============================================
+
+const GeoState = {
+    currentPosition: null,
+    monsterSpawns: [],
+    isWatching: false,
+    radarScale: 100 // metros por 50px (raio do radar)
+};
+
+/**
+ * Iniciar monitoramento de GPS
+ */
+async function initGeolocation() {
+    if (!('geolocation' in navigator)) {
+        updateGPSStatus('❌ GPS não disponível');
+        return false;
+    }
+
+    try {
+        // Obter posição inicial
+        const position = await getCurrentPositionAsync();
+        GeoState.currentPosition = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+        };
+
+        updateGPSStatus('✓ GPS ativo');
+        updateLocationDisplay(GeoState.currentPosition);
+
+        // Gerar spawns de monstros iniciais
+        generateMonsterSpawns(3);
+
+        // Iniciar monitoramento contínuo
+        startWatchingPosition();
+
+        return true;
+    } catch (error) {
+        console.error('❌ Erro de GPS:', error);
+        updateGPSStatus('❌ ' + getGPSErrorMessage(error));
+        return false;
+    }
+}
+
+function getCurrentPositionAsync() {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 5000
+        });
+    });
+}
+
+function startWatchingPosition() {
+    if (GeoState.isWatching) return;
+
+    GeoState.watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            GeoState.currentPosition = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                heading: position.coords.heading
+            };
+
+            updateLocationDisplay(GeoState.currentPosition);
+            updateRadar();
+            checkNearbyMonsters();
+        },
+        (error) => {
+            console.error('❌ Erro no watch GPS:', error);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 2000
+        }
+    );
+
+    GeoState.isWatching = true;
+    console.log('🛰️ Monitoramento GPS iniciado');
+}
+
+function stopWatchingPosition() {
+    if (GeoState.watchId) {
+        navigator.geolocation.clearWatch(GeoState.watchId);
+        GeoState.watchId = null;
+        GeoState.isWatching = false;
+    }
+}
+
+/**
+ * Calcular distância entre dois pontos (Haversine)
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Raio da Terra em metros
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+}
+
+function toRad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+/**
+ * Gerar spawns de monstros ao redor do jogador
+ */
+function generateMonsterSpawns(count = 3) {
+    if (!GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+    GeoState.monsterSpawns = [];
+
+    const types = ['werewolf', 'vampire', 'ghost', 'demon'];
+
+    for (let i = 0; i < count; i++) {
+        // Distância aleatória entre 20 e 80 metros
+        const distance = 20 + Math.random() * 60;
+        const angle = Math.random() * 2 * Math.PI;
+
+        const deltaLat = (distance / 111000) * Math.cos(angle);
+        const deltaLon = (distance / (111000 * Math.cos(toRad(latitude)))) * Math.sin(angle);
+
+        GeoState.monsterSpawns.push({
+            id: `spawn_${Date.now()}_${i}`,
+            latitude: latitude + deltaLat,
+            longitude: longitude + deltaLon,
+            distance: Math.round(distance),
+            type: types[Math.floor(Math.random() * types.length)],
+            active: true
+        });
+    }
+
+    console.log(`🐺 ${count} monstros gerados no mapa`);
+    updateRadar();
+}
+
+/**
+ * Verificar se há monstros próximos
+ */
+function checkNearbyMonsters() {
+    if (!GeoState.currentPosition || GeoState.monsterSpawns.length === 0) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+    const alertEl = document.getElementById('monster-alert');
+
+    for (const spawn of GeoState.monsterSpawns) {
+        if (!spawn.active) continue;
+
+        const distance = calculateDistance(latitude, longitude, spawn.latitude, spawn.longitude);
+        spawn.currentDistance = Math.round(distance);
+
+        // Se está a menos de 15 metros, mostrar alerta
+        if (distance < 15) {
+            alertEl.textContent = `🐺 ${getMonsterName(spawn.type)} a ${spawn.currentDistance}m!`;
+            alertEl.classList.add('visible');
+
+            // Vibrar se disponível
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+
+            // Auto-spawnar no modo AR se estiver ativo
+            const scene = document.getElementById('ar-scene');
+            if (scene && scene.is('ar-mode')) {
+                const spawner = scene.systems['monster-spawner'];
+                if (spawner) {
+                    spawner.spawnMonster(spawn.type);
+                    spawn.active = false; // Marcar como usado
+                    updateRadar();
+                }
+            }
+        } else {
+            alertEl.classList.remove('visible');
+        }
+    }
+}
+
+function getMonsterName(type) {
+    const names = {
+        werewolf: 'Lobisomem',
+        vampire: 'Vampiro',
+        ghost: 'Fantasma',
+        demon: 'Demônio'
+    };
+    return names[type] || type;
+}
+
+/**
+ * Atualizar blips no radar
+ */
+function updateRadar() {
+    const radar = document.getElementById('radar');
+    if (!radar || !GeoState.currentPosition) return;
+
+    // Remover blips antigos
+    radar.querySelectorAll('.radar-blip').forEach(el => el.remove());
+
+    const { latitude, longitude } = GeoState.currentPosition;
+    const radarRadius = 47; // pixels (metade do radar - borda)
+
+    for (const spawn of GeoState.monsterSpawns) {
+        if (!spawn.active) continue;
+
+        // Calcular posição relativa
+        const deltaLat = spawn.latitude - latitude;
+        const deltaLon = spawn.longitude - longitude;
+
+        // Converter para metros
+        const dx = deltaLon * 111000 * Math.cos(toRad(latitude));
+        const dy = deltaLat * 111000;
+
+        // Escalar para pixels do radar (100m = raio do radar)
+        const scale = radarRadius / GeoState.radarScale;
+        let px = dx * scale;
+        let py = -dy * scale; // Invertido porque Y cresce para baixo
+
+        // Limitar ao círculo do radar
+        const dist = Math.sqrt(px * px + py * py);
+        if (dist > radarRadius) {
+            px = (px / dist) * radarRadius;
+            py = (py / dist) * radarRadius;
+        }
+
+        // Criar blip
+        const blip = document.createElement('div');
+        blip.className = 'radar-blip';
+        blip.style.left = `${50 + px}px`;
+        blip.style.top = `${50 + py}px`;
+        blip.title = `${getMonsterName(spawn.type)} - ${spawn.currentDistance || spawn.distance}m`;
+
+        radar.appendChild(blip);
+    }
+}
+
+/**
+ * Atualizar display de localização
+ */
+function updateLocationDisplay(position) {
+    const streetEl = document.getElementById('location-street');
+    const coordsEl = document.getElementById('location-coords');
+
+    if (coordsEl) {
+        coordsEl.textContent = `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}`;
+    }
+
+    // Tentar obter nome da rua (async, sem bloquear)
+    getStreetName(position.latitude, position.longitude)
+        .then(name => {
+            if (streetEl && name) {
+                streetEl.textContent = `📍 ${name}`;
+            }
+        })
+        .catch(() => {
+            if (streetEl) {
+                streetEl.textContent = '📍 Localização ativa';
+            }
+        });
+}
+
+/**
+ * Obter nome da rua via Nominatim (OpenStreetMap)
+ */
+async function getStreetName(lat, lon) {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+        );
+        const data = await response.json();
+        return data.address?.road || data.address?.suburb || 'Área local';
+    } catch {
+        return null;
+    }
+}
+
+function updateGPSStatus(status) {
+    const el = document.getElementById('debug-gps');
+    if (el) el.textContent = status;
+}
+
+function getGPSErrorMessage(error) {
+    switch (error.code) {
+        case 1: return 'Permissão negada';
+        case 2: return 'Posição indisponível';
+        case 3: return 'Timeout';
+        default: return 'Erro desconhecido';
+    }
+}
+
+// Inicializar GPS quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    // Iniciar GPS após um pequeno delay para não bloquear o carregamento
+    setTimeout(() => {
+        initGeolocation();
+    }, 1000);
+});
