@@ -1,11 +1,56 @@
 /**
  * Supernatural AR - Main Application
- * Protótipo: Spawn de monstros em superfícies + Sistema de Tiro com Raycasting
+ * Sistema de Inventário com 3 Slots + Combate AR
  */
 
 // ============================================
+// DADOS DO JOGO
+// ============================================
+
+const GameData = {
+    // Inventário do jogador (todos os itens coletados)
+    inventory: {
+        weapons: [
+            { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [] },
+            { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'] },
+            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'] },
+            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'] },
+            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'] }
+        ],
+        accessories: [
+            { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost', filter: 'grayscale' },
+            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', quantity: 1, effect: 'reveal_messages', filter: 'uv' },
+            { id: 'emf', name: 'Detector EMF', icon: '📡', quantity: 1, effect: 'detect_nearby', filter: null }
+        ],
+        healing: [
+            { id: 'bandage', name: 'Bandagem', icon: '🩹', quantity: 5, healAmount: 20 },
+            { id: 'medkit', name: 'Kit Médico', icon: '💊', quantity: 2, healAmount: 50 },
+            { id: 'adrenaline', name: 'Adrenalina', icon: '💉', quantity: 1, healAmount: 100 }
+        ]
+    },
+
+    // Itens equipados (1 de cada tipo)
+    equipped: {
+        weapon: null,
+        accessory: null,
+        healing: null
+    },
+
+    // Status do jogador
+    player: {
+        hp: 100,
+        maxHp: 100
+    },
+
+    // Tab atual do inventário
+    currentTab: 'weapons'
+};
+
+// Inicializar com punho equipado
+GameData.equipped.weapon = GameData.inventory.weapons[0];
+
+// ============================================
 // COMPONENTE: ar-monster
-// Representa um monstro na cena AR
 // ============================================
 AFRAME.registerComponent('ar-monster', {
     schema: {
@@ -18,7 +63,6 @@ AFRAME.registerComponent('ar-monster', {
         const el = this.el;
         const data = this.data;
 
-        // Mapear tipo para modelo
         const modelMap = {
             werewolf: '#werewolf-model',
             vampire: '#vampire-model',
@@ -26,13 +70,9 @@ AFRAME.registerComponent('ar-monster', {
             demon: '#demon-model'
         };
 
-        // Carregar modelo 3D
         el.setAttribute('gltf-model', modelMap[data.type] || '#werewolf-model');
-
-        // Escala do monstro (ajustar conforme necessário)
         el.setAttribute('scale', '0.5 0.5 0.5');
 
-        // Animação idle (rotação lenta)
         el.setAttribute('animation', {
             property: 'rotation',
             to: '0 360 0',
@@ -41,7 +81,6 @@ AFRAME.registerComponent('ar-monster', {
             easing: 'linear'
         });
 
-        // Registrar no sistema de combate
         const combatSystem = this.el.sceneEl.systems['combat'];
         if (combatSystem) {
             combatSystem.registerMonster(el);
@@ -50,16 +89,30 @@ AFRAME.registerComponent('ar-monster', {
         console.log(`🐺 Monstro spawned: ${data.type} com ${data.hp} HP`);
     },
 
-    takeDamage: function (amount) {
-        this.data.hp -= amount;
+    takeDamage: function (amount, weaponId) {
+        // Verificar se a arma é efetiva contra este monstro
+        const weapon = GameData.inventory.weapons.find(w => w.id === weaponId);
+        let actualDamage = amount;
+        let isWeakness = false;
 
-        // Efeito visual de dano (piscar vermelho)
+        if (weapon && weapon.weakness.includes(this.data.type)) {
+            actualDamage = amount * 2; // Dano dobrado se for fraqueza
+            isWeakness = true;
+            console.log(`⚡ FRAQUEZA! Dano dobrado: ${actualDamage}`);
+        } else if (weapon && weapon.weakness.length > 0 && !weapon.weakness.includes(this.data.type)) {
+            actualDamage = Math.floor(amount * 0.3); // Dano reduzido se não for fraqueza
+            console.log(`🛡️ Resistente! Dano reduzido: ${actualDamage}`);
+        }
+
+        this.data.hp -= actualDamage;
+
+        // Efeito visual de dano
         const mesh = this.el.getObject3D('mesh');
         if (mesh) {
             mesh.traverse((node) => {
                 if (node.isMesh && node.material) {
                     const originalColor = node.material.color.clone();
-                    node.material.color.setHex(0xff0000);
+                    node.material.color.setHex(isWeakness ? 0xffff00 : 0xff0000);
                     setTimeout(() => {
                         node.material.color.copy(originalColor);
                     }, 150);
@@ -67,23 +120,19 @@ AFRAME.registerComponent('ar-monster', {
             });
         }
 
-        // Atualizar HUD
         updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
+        console.log(`💥 Monstro tomou ${actualDamage} de dano! HP restante: ${this.data.hp}`);
 
-        console.log(`💥 Monstro tomou ${amount} de dano! HP restante: ${this.data.hp}`);
-
-        // Verificar se morreu
         if (this.data.hp <= 0) {
             this.die();
         }
 
-        return this.data.hp;
+        return { damage: actualDamage, isWeakness, remainingHp: this.data.hp };
     },
 
     die: function () {
         console.log(`💀 Monstro derrotado: ${this.data.type}`);
 
-        // Efeito de morte (escalar para baixo e sumir)
         this.el.setAttribute('animation__death', {
             property: 'scale',
             to: '0 0 0',
@@ -96,7 +145,6 @@ AFRAME.registerComponent('ar-monster', {
             combatSystem.unregisterMonster(this.el);
         }
 
-        // Remover após animação
         setTimeout(() => {
             this.el.parentNode.removeChild(this.el);
             updateMonsterCount();
@@ -114,7 +162,6 @@ AFRAME.registerComponent('ar-monster', {
 
 // ============================================
 // SISTEMA: combat
-// Gerencia raycasting e detecção de tiros
 // ============================================
 AFRAME.registerSystem('combat', {
     schema: {},
@@ -122,8 +169,6 @@ AFRAME.registerSystem('combat', {
     init: function () {
         this.raycaster = new THREE.Raycaster();
         this.monsters = [];
-        this.tempMatrix = new THREE.Matrix4();
-
         console.log('⚔️ Sistema de combate inicializado');
     },
 
@@ -144,15 +189,18 @@ AFRAME.registerSystem('combat', {
 
     fire: function () {
         const camera = this.el.sceneEl.camera;
+        const equippedWeapon = GameData.equipped.weapon;
 
         if (!camera) {
             console.warn('❌ Câmera não encontrada');
             return { hit: false };
         }
 
-        // Raycaster do centro da tela (mira)
-        // Origem: posição da câmera
-        // Direção: para onde a câmera está olhando
+        if (!equippedWeapon) {
+            console.log('🤷 Nenhuma arma equipada');
+            return { hit: false, reason: 'no_weapon' };
+        }
+
         const cameraPosition = new THREE.Vector3();
         const cameraDirection = new THREE.Vector3();
 
@@ -161,7 +209,6 @@ AFRAME.registerSystem('combat', {
 
         this.raycaster.set(cameraPosition, cameraDirection);
 
-        // Coletar todos os meshes dos monstros
         const meshes = [];
         this.monsters.forEach(monster => {
             const mesh = monster.getObject3D('mesh');
@@ -175,30 +222,26 @@ AFRAME.registerSystem('combat', {
             return { hit: false, reason: 'no_monsters' };
         }
 
-        // Verificar interseções
         const intersects = this.raycaster.intersectObjects(meshes, true);
 
         if (intersects.length > 0) {
-            // Encontrou um alvo!
             const hitObject = intersects[0];
             const monsterEl = this.findMonsterFromMesh(hitObject.object);
 
             if (monsterEl) {
                 const monsterComponent = monsterEl.components['ar-monster'];
-                const damage = 25; // Dano base
+                const result = monsterComponent.takeDamage(equippedWeapon.damage, equippedWeapon.id);
 
-                monsterComponent.takeDamage(damage);
-
-                // Vibrar dispositivo
                 if (navigator.vibrate) {
-                    navigator.vibrate([50, 30, 50]);
+                    navigator.vibrate(result.isWeakness ? [100, 50, 100] : [50, 30, 50]);
                 }
 
                 return {
                     hit: true,
                     monster: monsterComponent.data.type,
-                    damage: damage,
-                    remainingHp: monsterComponent.data.hp,
+                    damage: result.damage,
+                    isWeakness: result.isWeakness,
+                    remainingHp: result.remainingHp,
                     point: hitObject.point
                 };
             }
@@ -208,7 +251,6 @@ AFRAME.registerSystem('combat', {
     },
 
     findMonsterFromMesh: function (mesh) {
-        // Subir na hierarquia até encontrar a entity com ar-monster
         let current = mesh;
         while (current) {
             if (current.el && current.el.hasAttribute('ar-monster')) {
@@ -222,7 +264,6 @@ AFRAME.registerSystem('combat', {
 
 // ============================================
 // SISTEMA: monster-spawner
-// Gerencia spawn de monstros em superfícies
 // ============================================
 AFRAME.registerSystem('monster-spawner', {
     init: function () {
@@ -230,23 +271,14 @@ AFRAME.registerSystem('monster-spawner', {
         this.reticle = null;
         this.lastHitPose = null;
 
-        // Aguardar cena carregar
         this.sceneEl.addEventListener('loaded', () => {
             this.reticle = document.getElementById('reticle');
             console.log('🎯 Monster Spawner inicializado');
         });
 
-        // Escutar hit-test
-        this.sceneEl.addEventListener('ar-hit-test-start', () => {
-            console.log('📍 AR Hit Test iniciado');
-            document.getElementById('debug-mode').textContent = 'AR Ativo ✓';
-        });
-
-        // Guardar última pose válida
         this.sceneEl.addEventListener('ar-hit-test-achieved', (e) => {
             if (this.reticle) {
                 this.reticle.setAttribute('visible', true);
-                // Guardar posição/rotação do reticle
                 this.lastHitPose = {
                     position: this.reticle.getAttribute('position'),
                     rotation: this.reticle.getAttribute('rotation')
@@ -256,21 +288,17 @@ AFRAME.registerSystem('monster-spawner', {
     },
 
     spawnMonster: function (type = null) {
-        // Se não temos pose, spawnar na frente da câmera
         let position;
         let rotation = { x: 0, y: 0, z: 0 };
 
         if (this.lastHitPose && this.reticle && this.reticle.getAttribute('visible')) {
-            // Usar posição do reticle (superfície detectada)
             const reticlePos = this.reticle.getAttribute('position');
             position = { x: reticlePos.x, y: reticlePos.y, z: reticlePos.z };
         } else {
-            // Fallback: spawnar 2 metros à frente da câmera
             const camera = document.getElementById('camera');
             const cameraPos = camera.getAttribute('position');
             const cameraRot = camera.getAttribute('rotation');
 
-            // Calcular posição à frente
             const angle = THREE.MathUtils.degToRad(cameraRot.y);
             position = {
                 x: cameraPos.x - Math.sin(angle) * 2,
@@ -279,11 +307,9 @@ AFRAME.registerSystem('monster-spawner', {
             };
         }
 
-        // Tipos de monstros disponíveis
         const types = ['werewolf', 'vampire', 'ghost', 'demon'];
         const monsterType = type || types[Math.floor(Math.random() * types.length)];
 
-        // HP por tipo
         const hpMap = {
             werewolf: 100,
             vampire: 80,
@@ -291,7 +317,6 @@ AFRAME.registerSystem('monster-spawner', {
             demon: 120
         };
 
-        // Criar entidade do monstro
         const monster = document.createElement('a-entity');
         monster.setAttribute('ar-monster', {
             type: monsterType,
@@ -301,14 +326,10 @@ AFRAME.registerSystem('monster-spawner', {
         monster.setAttribute('position', position);
         monster.setAttribute('rotation', rotation);
 
-        // Adicionar à cena
         const container = document.getElementById('monsters-container');
         container.appendChild(monster);
 
-        // Atualizar contador
         updateMonsterCount();
-
-        // Mostrar HP do monstro
         showMonsterHP(monsterType, hpMap[monsterType], hpMap[monsterType]);
 
         console.log(`✨ Monstro spawnado: ${monsterType} em`, position);
@@ -316,6 +337,225 @@ AFRAME.registerSystem('monster-spawner', {
         return monster;
     }
 });
+
+// ============================================
+// SISTEMA DE INVENTÁRIO
+// ============================================
+
+function openInventory(slotType = null) {
+    const modal = document.getElementById('inventory-modal');
+    modal.classList.add('visible');
+
+    // Se um tipo foi especificado, abrir nessa tab
+    if (slotType) {
+        const tabMap = {
+            weapon: 'weapons',
+            accessory: 'accessories',
+            healing: 'healing'
+        };
+        switchTab(tabMap[slotType] || 'weapons');
+    }
+
+    renderInventory();
+}
+
+function closeInventory() {
+    const modal = document.getElementById('inventory-modal');
+    modal.classList.remove('visible');
+}
+
+function switchTab(tabName) {
+    GameData.currentTab = tabName;
+
+    // Atualizar tabs visuais
+    document.querySelectorAll('.inventory-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
+    });
+
+    renderInventory();
+}
+
+function renderInventory() {
+    const grid = document.getElementById('inventory-grid');
+    grid.innerHTML = '';
+
+    let items = [];
+    let equippedItem = null;
+
+    switch (GameData.currentTab) {
+        case 'weapons':
+            items = GameData.inventory.weapons;
+            equippedItem = GameData.equipped.weapon;
+            break;
+        case 'accessories':
+            items = GameData.inventory.accessories;
+            equippedItem = GameData.equipped.accessory;
+            break;
+        case 'healing':
+            items = GameData.inventory.healing;
+            equippedItem = GameData.equipped.healing;
+            break;
+    }
+
+    items.forEach(item => {
+        const isEquipped = equippedItem && equippedItem.id === item.id;
+
+        const itemEl = document.createElement('div');
+        itemEl.className = `inventory-item ${isEquipped ? 'equipped' : ''}`;
+        itemEl.dataset.itemId = item.id;
+
+        itemEl.innerHTML = `
+      <span class="item-icon">${item.icon}</span>
+      <span class="item-name">${item.name}</span>
+      ${item.quantity > 1 ? `<span class="item-qty">x${item.quantity}</span>` : ''}
+    `;
+
+        itemEl.addEventListener('click', () => equipItem(item.id, GameData.currentTab));
+
+        grid.appendChild(itemEl);
+    });
+}
+
+function equipItem(itemId, category) {
+    let items, slotKey;
+
+    switch (category) {
+        case 'weapons':
+            items = GameData.inventory.weapons;
+            slotKey = 'weapon';
+            break;
+        case 'accessories':
+            items = GameData.inventory.accessories;
+            slotKey = 'accessory';
+            break;
+        case 'healing':
+            items = GameData.inventory.healing;
+            slotKey = 'healing';
+            break;
+    }
+
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Se já está equipado, desequipar
+    if (GameData.equipped[slotKey] && GameData.equipped[slotKey].id === itemId) {
+        // Para armas, sempre manter o punho
+        if (slotKey === 'weapon') {
+            GameData.equipped[slotKey] = GameData.inventory.weapons[0]; // Punho
+        } else {
+            GameData.equipped[slotKey] = null;
+        }
+    } else {
+        GameData.equipped[slotKey] = item;
+    }
+
+    updateEquipmentSlots();
+    renderInventory();
+    closeInventory();
+
+    console.log(`✅ Equipado: ${item.name}`);
+}
+
+function updateEquipmentSlots() {
+    // Atualizar slot de arma
+    const weaponSlot = document.getElementById('slot-weapon');
+    const weapon = GameData.equipped.weapon;
+    weaponSlot.querySelector('.slot-icon').textContent = weapon ? weapon.icon : '🤛';
+
+    // Atualizar slot de acessório
+    const accessorySlot = document.getElementById('slot-accessory');
+    const accessory = GameData.equipped.accessory;
+    accessorySlot.querySelector('.slot-icon').textContent = accessory ? accessory.icon : '➖';
+
+    // Atualizar slot de cura
+    const healingSlot = document.getElementById('slot-healing');
+    const healing = GameData.equipped.healing;
+    healingSlot.querySelector('.slot-icon').textContent = healing ? healing.icon : '➖';
+
+    // Atualizar debug
+    const debugWeapon = document.getElementById('debug-weapon');
+    if (debugWeapon) {
+        debugWeapon.textContent = weapon ? weapon.name : 'Nenhuma';
+    }
+
+    // Aplicar filtro de acessório se necessário
+    applyAccessoryFilter();
+}
+
+function applyAccessoryFilter() {
+    const accessory = GameData.equipped.accessory;
+    const sceneEl = document.getElementById('ar-scene');
+
+    // Remover filtros existentes
+    sceneEl.style.filter = 'none';
+
+    if (accessory && accessory.filter) {
+        switch (accessory.filter) {
+            case 'grayscale':
+                sceneEl.style.filter = 'grayscale(1) contrast(1.2)';
+                break;
+            case 'uv':
+                sceneEl.style.filter = 'hue-rotate(240deg) saturate(2)';
+                break;
+        }
+    }
+}
+
+function useHealingItem() {
+    const healing = GameData.equipped.healing;
+    if (!healing) {
+        console.log('❌ Nenhum item de cura equipado');
+        return;
+    }
+
+    if (GameData.player.hp >= GameData.player.maxHp) {
+        console.log('❤️ HP já está cheio!');
+        return;
+    }
+
+    // Aplicar cura
+    GameData.player.hp = Math.min(GameData.player.maxHp, GameData.player.hp + healing.healAmount);
+
+    // Reduzir quantidade
+    healing.quantity--;
+
+    // Se acabou, remover dos equipados
+    if (healing.quantity <= 0) {
+        const idx = GameData.inventory.healing.findIndex(h => h.id === healing.id);
+        if (idx !== -1) {
+            GameData.inventory.healing.splice(idx, 1);
+        }
+        GameData.equipped.healing = null;
+    }
+
+    updatePlayerHP();
+    updateEquipmentSlots();
+
+    console.log(`💊 Curado! +${healing.healAmount} HP. HP atual: ${GameData.player.hp}`);
+
+    // Feedback visual
+    if (navigator.vibrate) {
+        navigator.vibrate([30, 20, 30]);
+    }
+}
+
+function updatePlayerHP() {
+    const fill = document.getElementById('player-hp-fill');
+    const percent = (GameData.player.hp / GameData.player.maxHp) * 100;
+    fill.style.width = `${percent}%`;
+
+    // Mudar cor conforme HP
+    if (percent < 25) {
+        fill.style.background = 'linear-gradient(90deg, #ff0000, #660000)';
+    } else if (percent < 50) {
+        fill.style.background = 'linear-gradient(90deg, #ff6600, #cc3300)';
+    } else {
+        fill.style.background = 'linear-gradient(90deg, #00cc00, #44ff44)';
+    }
+}
 
 // ============================================
 // FUNÇÕES DE UI/HUD
@@ -331,7 +571,6 @@ function showMonsterHP(name, hp, maxHp) {
     const nameEl = document.getElementById('monster-name');
     const fillEl = document.getElementById('monster-hp-fill');
 
-    // Traduzir nome
     const nameMap = {
         werewolf: '🐺 Lobisomem',
         vampire: '🧛 Vampiro',
@@ -349,7 +588,6 @@ function updateMonsterHP(hp, maxHp, name) {
     const percent = Math.max(0, (hp / maxHp) * 100);
     fillEl.style.width = `${percent}%`;
 
-    // Mudar cor conforme HP
     if (percent < 25) {
         fillEl.style.background = 'linear-gradient(90deg, #ff0000, #660000)';
     } else if (percent < 50) {
@@ -361,28 +599,31 @@ function hideMonsterHP() {
     document.getElementById('monster-hp').classList.remove('visible');
 }
 
-function showHitFeedback(hit, damage = 0) {
+function showHitFeedback(hit, damage = 0, isWeakness = false) {
     const feedback = document.getElementById('hit-feedback');
 
     if (hit) {
-        feedback.textContent = `-${damage}`;
+        feedback.textContent = isWeakness ? `⚡-${damage}` : `-${damage}`;
         feedback.className = 'hit';
+        if (isWeakness) {
+            feedback.style.color = '#ffff00';
+        }
     } else {
         feedback.textContent = 'MISS';
         feedback.className = 'miss';
     }
 
-    // Limpar após animação
     setTimeout(() => {
         feedback.className = '';
+        feedback.style.color = '';
     }, 300);
 }
 
 function updateDebugShot(result) {
     const el = document.getElementById('debug-shot');
     if (result.hit) {
-        el.textContent = `HIT! -${result.damage}`;
-        el.style.color = '#ff4444';
+        el.textContent = result.isWeakness ? `CRIT! -${result.damage}` : `HIT! -${result.damage}`;
+        el.style.color = result.isWeakness ? '#ffff00' : '#ff4444';
     } else {
         el.textContent = result.reason === 'no_monsters' ? 'Sem alvo' : 'Errou';
         el.style.color = '#888';
@@ -396,7 +637,7 @@ function updateDebugShot(result) {
 let arSession = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎮 Supernatural AR - Protótipo Iniciando...');
+    console.log('🎮 Supernatural AR - Sistema de Inventário');
 
     const scene = document.getElementById('ar-scene');
     const startScreen = document.getElementById('start-screen');
@@ -405,7 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const arStatus = document.getElementById('ar-status');
     const hud = document.getElementById('hud');
 
-    // Verificar suporte WebXR
     async function checkARSupport() {
         if (!navigator.xr) {
             arStatus.textContent = '❌ WebXR não disponível';
@@ -431,17 +671,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Entrar no modo AR
     async function enterAR() {
         console.log('🚀 Entrando no modo AR...');
         arStatus.textContent = '⏳ Iniciando câmera AR...';
 
         try {
-            // Usar a API do A-Frame para entrar em AR
             if (scene.enterAR) {
                 await scene.enterAR();
             } else {
-                // Fallback: solicitar sessão WebXR diretamente
                 const sessionInit = {
                     requiredFeatures: ['hit-test', 'local-floor'],
                     optionalFeatures: ['dom-overlay', 'anchors'],
@@ -457,7 +694,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Esconder tela inicial e mostrar HUD
             startScreen.classList.add('hidden');
             hud.classList.add('visible');
 
@@ -469,7 +705,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Sair do modo AR
     function exitAR() {
         console.log('📴 Saindo do modo AR...');
 
@@ -482,20 +717,18 @@ document.addEventListener('DOMContentLoaded', () => {
             scene.xrSession.end();
         }
 
-        // Mostrar tela inicial e esconder HUD
         startScreen.classList.remove('hidden');
         hud.classList.remove('visible');
     }
 
-    // Aguardar cena carregar
     scene.addEventListener('loaded', () => {
         console.log('✓ Cena A-Frame carregada');
         checkARSupport();
+        updateEquipmentSlots();
+        updatePlayerHP();
 
-        // Botão de Entrar em AR
+        // Botões principais
         enterArButton.addEventListener('click', enterAR);
-
-        // Botão de Sair do AR
         exitArButton.addEventListener('click', exitAR);
 
         // Botão de Spawn
@@ -511,15 +744,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const combat = scene.systems['combat'];
             if (combat) {
                 const result = combat.fire();
-                showHitFeedback(result.hit, result.damage);
+                showHitFeedback(result.hit, result.damage, result.isWeakness);
                 updateDebugShot(result);
-
                 console.log('💥 Resultado do tiro:', result);
             }
         });
+
+        // Slots de equipamento - abrir inventário ao clicar
+        document.querySelectorAll('.equipment-slot').forEach(slot => {
+            slot.addEventListener('click', () => {
+                const slotType = slot.dataset.type;
+                openInventory(slotType);
+            });
+        });
+
+        // Slot de cura - usar item com long press ou duplo clique
+        const healingSlot = document.getElementById('slot-healing');
+        let healingPressTimer;
+
+        healingSlot.addEventListener('touchstart', () => {
+            healingPressTimer = setTimeout(() => {
+                useHealingItem();
+            }, 500);
+        });
+
+        healingSlot.addEventListener('touchend', () => {
+            clearTimeout(healingPressTimer);
+        });
+
+        // Fechar inventário
+        document.getElementById('close-inventory').addEventListener('click', closeInventory);
+
+        // Tabs do inventário
+        document.querySelectorAll('.inventory-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                switchTab(tab.dataset.tab);
+            });
+        });
     });
 
-    // Escutar quando AR é ativado via A-Frame
     scene.addEventListener('enter-vr', () => {
         if (scene.is('ar-mode')) {
             console.log('🎯 Modo AR ativado via A-Frame');

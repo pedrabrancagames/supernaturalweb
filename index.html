@@ -165,20 +165,20 @@
       box-shadow: 0 2px 10px rgba(255, 0, 0, 0.3);
     }
 
-    /* Botão de Spawn */
+    /* Botão de Spawn (temporário para debug) */
     #spawn-button {
       position: absolute;
-      bottom: 30px;
-      right: 30px;
-      width: 60px;
-      height: 60px;
+      bottom: 120px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       background: linear-gradient(145deg, #44ff44, #00cc00);
       border: 3px solid #fff;
       box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
       pointer-events: auto;
       cursor: pointer;
-      font-size: 28px;
+      font-size: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -201,6 +201,218 @@
       align-items: center;
       justify-content: center;
       color: white;
+    }
+
+    /* ========================================
+       SLOTS DE EQUIPAMENTO (3 slots)
+       ======================================== */
+    #equipment-slots {
+      position: absolute;
+      bottom: 30px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .equipment-slot {
+      width: 55px;
+      height: 55px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .equipment-slot:active {
+      transform: scale(0.95);
+    }
+
+    .equipment-slot.weapon {
+      border-color: #ff6b6b;
+    }
+
+    .equipment-slot.accessory {
+      border-color: #4ecdc4;
+    }
+
+    .equipment-slot.healing {
+      border-color: #95e1a3;
+    }
+
+    .equipment-slot.selected {
+      border-width: 3px;
+      box-shadow: 0 0 15px currentColor;
+    }
+
+    .equipment-slot.weapon.selected {
+      box-shadow: 0 0 15px #ff6b6b;
+    }
+
+    .equipment-slot.accessory.selected {
+      box-shadow: 0 0 15px #4ecdc4;
+    }
+
+    .equipment-slot.healing.selected {
+      box-shadow: 0 0 15px #95e1a3;
+    }
+
+    .equipment-slot .slot-label {
+      position: absolute;
+      bottom: -18px;
+      font-size: 9px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .equipment-slot .quantity {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #ff4444;
+      color: white;
+      font-size: 10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    /* ========================================
+       MODAL DE INVENTÁRIO
+       ======================================== */
+    #inventory-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      pointer-events: auto;
+    }
+
+    #inventory-modal.visible {
+      display: flex;
+    }
+
+    #inventory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #333;
+    }
+
+    #inventory-header h2 {
+      font-size: 20px;
+    }
+
+    #close-inventory {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #333;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    #inventory-tabs {
+      display: flex;
+      border-bottom: 1px solid #333;
+    }
+
+    .inventory-tab {
+      flex: 1;
+      padding: 15px;
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .inventory-tab.active {
+      color: #fff;
+      border-bottom-color: #ff4444;
+    }
+
+    .inventory-tab.weapons.active {
+      border-bottom-color: #ff6b6b;
+    }
+
+    .inventory-tab.accessories.active {
+      border-bottom-color: #4ecdc4;
+    }
+
+    .inventory-tab.healing.active {
+      border-bottom-color: #95e1a3;
+    }
+
+    #inventory-grid {
+      flex: 1;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      overflow-y: auto;
+      align-content: start;
+    }
+
+    .inventory-item {
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 2px solid #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 10px;
+    }
+
+    .inventory-item:active {
+      transform: scale(0.95);
+    }
+
+    .inventory-item.equipped {
+      border-color: #ffcc00;
+      background: rgba(255, 204, 0, 0.1);
+    }
+
+    .inventory-item .item-icon {
+      font-size: 32px;
+      margin-bottom: 5px;
+    }
+
+    .inventory-item .item-name {
+      font-size: 11px;
+      text-align: center;
+      color: #ccc;
+    }
+
+    .inventory-item .item-qty {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
     }
 
     /* Status de Debug */
@@ -277,6 +489,32 @@
       transition: width 0.3s;
     }
 
+    /* HP do Jogador */
+    #player-hp {
+      position: absolute;
+      top: 20px;
+      left: 80px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 15px;
+      border-radius: 10px;
+    }
+
+    #player-hp-bar {
+      width: 120px;
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    #player-hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00cc00, #44ff44);
+      transition: width 0.3s;
+      width: 100%;
+    }
+
     /* Instruções */
     #instructions {
       position: absolute;
@@ -286,9 +524,9 @@
       background: rgba(0, 0, 0, 0.8);
       padding: 10px 20px;
       border-radius: 20px;
-      font-size: 14px;
+      font-size: 12px;
       text-align: center;
-      max-width: 300px;
+      max-width: 280px;
     }
 
     /* Esconder botões padrão do A-Frame */
@@ -345,6 +583,14 @@
     <!-- Botão de Sair -->
     <button id="exit-ar-button">✕</button>
 
+    <!-- HP do Jogador -->
+    <div id="player-hp">
+      <span>❤️ Caçador</span>
+      <div id="player-hp-bar">
+        <div id="player-hp-fill"></div>
+      </div>
+    </div>
+
     <!-- Mira -->
     <div id="crosshair"></div>
 
@@ -362,21 +608,55 @@
     <!-- Debug Panel -->
     <div id="debug-panel">
       <h3>🎮 Debug</h3>
-      <p>Modo: <span id="debug-mode">AR Ativo</span></p>
       <p>Monstros: <span id="debug-monsters">0</span></p>
+      <p>Arma: <span id="debug-weapon">Nenhuma</span></p>
       <p>Último tiro: <span id="debug-shot">-</span></p>
     </div>
 
     <!-- Instruções -->
     <div id="instructions">
-      Aponte para o chão e toque <strong>+</strong> para spawnar um monstro. Mire e atire com <strong>🔫</strong>
+      Toque nos slots à direita para equipar itens. Use <strong>🔫</strong> para atacar.
+    </div>
+
+    <!-- Slots de Equipamento (3 slots) -->
+    <div id="equipment-slots">
+      <div class="equipment-slot weapon" id="slot-weapon" data-type="weapon">
+        <span class="slot-icon">🤛</span>
+        <span class="slot-label">Arma</span>
+      </div>
+      <div class="equipment-slot accessory" id="slot-accessory" data-type="accessory">
+        <span class="slot-icon">➖</span>
+        <span class="slot-label">Acessório</span>
+      </div>
+      <div class="equipment-slot healing" id="slot-healing" data-type="healing">
+        <span class="slot-icon">➖</span>
+        <span class="slot-label">Cura</span>
+      </div>
     </div>
 
     <!-- Botão de Ação (Atirar) -->
     <button id="fire-button">🔫</button>
 
-    <!-- Botão de Spawn -->
+    <!-- Botão de Spawn (debug) -->
     <button id="spawn-button">+</button>
+  </div>
+
+  <!-- Modal de Inventário -->
+  <div id="inventory-modal">
+    <div id="inventory-header">
+      <h2>📦 Inventário</h2>
+      <button id="close-inventory">✕</button>
+    </div>
+
+    <div id="inventory-tabs">
+      <button class="inventory-tab weapons active" data-tab="weapons">⚔️ Armas</button>
+      <button class="inventory-tab accessories" data-tab="accessories">🔧 Acessórios</button>
+      <button class="inventory-tab healing" data-tab="healing">💊 Cura</button>
+    </div>
+
+    <div id="inventory-grid">
+      <!-- Itens serão adicionados via JavaScript -->
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>
