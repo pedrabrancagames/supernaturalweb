@@ -609,17 +609,23 @@ function addDiaryEntry(text) {
 }
 
 // ============================================
-// GEOLOCATION
+// GEOLOCATION & MINI-MAP (Leaflet)
 // ============================================
 
 const GeoState = {
     currentPosition: null,
     monsterSpawns: [],
-    isWatching: false
+    isWatching: false,
+    map: null,
+    playerMarker: null,
+    watchId: null
 };
 
 function initARGeolocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+        console.warn('GPS não disponível');
+        return;
+    }
 
     navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -627,11 +633,84 @@ function initARGeolocation() {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude
             };
+            initMiniMap();
             updateARLocation();
+            startWatchingPosition();
         },
         (err) => console.error('GPS error:', err),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000 }
     );
+}
+
+function initMiniMap() {
+    if (GeoState.map) return; // Já inicializado
+
+    const mapContainer = document.getElementById('ar-map');
+    if (!mapContainer || !GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Criar mapa Leaflet
+    GeoState.map = L.map('ar-map', {
+        center: [latitude, longitude],
+        zoom: 17,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        touchZoom: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false
+    });
+
+    // Tile layer (OpenStreetMap escuro)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+    }).addTo(GeoState.map);
+
+    // Marcador do jogador
+    const playerIcon = L.divIcon({
+        className: 'player-marker',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+    });
+
+    GeoState.playerMarker = L.marker([latitude, longitude], { icon: playerIcon })
+        .addTo(GeoState.map);
+
+    console.log('🗺️ Mini-mapa inicializado');
+}
+
+function startWatchingPosition() {
+    if (GeoState.isWatching) return;
+
+    GeoState.watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            GeoState.currentPosition = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
+            };
+            updateMiniMap();
+            updateARLocation();
+        },
+        (err) => console.error('Watch error:', err),
+        { enableHighAccuracy: true, maximumAge: 2000 }
+    );
+
+    GeoState.isWatching = true;
+}
+
+function updateMiniMap() {
+    if (!GeoState.map || !GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Mover mapa para manter jogador no centro
+    GeoState.map.setView([latitude, longitude], GeoState.map.getZoom(), { animate: true });
+
+    // Atualizar marcador do jogador
+    if (GeoState.playerMarker) {
+        GeoState.playerMarker.setLatLng([latitude, longitude]);
+    }
 }
 
 function updateARLocation() {
@@ -639,6 +718,85 @@ function updateARLocation() {
     if (el && GeoState.currentPosition) {
         el.querySelector('.street').textContent = `📍 ${GeoState.currentPosition.latitude.toFixed(4)}, ${GeoState.currentPosition.longitude.toFixed(4)}`;
     }
+}
+
+// ============================================
+// AR INVENTORY MODAL
+// ============================================
+
+let currentARSlotType = null;
+
+function openARInventory(slotType) {
+    currentARSlotType = slotType;
+    const modal = document.getElementById('ar-inventory-modal');
+    const grid = document.getElementById('ar-inv-grid');
+
+    if (!modal || !grid) return;
+
+    grid.innerHTML = '';
+
+    let items = [];
+    let equippedItem = null;
+
+    switch (slotType) {
+        case 'weapon':
+            items = GameData.inventory.weapons;
+            equippedItem = GameData.equipped.weapon;
+            break;
+        case 'accessory':
+            items = GameData.inventory.accessories;
+            equippedItem = GameData.equipped.accessory;
+            break;
+        case 'healing':
+            items = GameData.inventory.healing;
+            equippedItem = GameData.equipped.healing;
+            break;
+    }
+
+    items.forEach(item => {
+        const isEquipped = equippedItem && equippedItem.id === item.id;
+        const el = document.createElement('div');
+        el.className = `ar-inv-item ${isEquipped ? 'equipped' : ''}`;
+        el.innerHTML = `<span>${item.icon}</span>`;
+        el.addEventListener('click', () => {
+            equipARItem(item.id, slotType);
+        });
+        grid.appendChild(el);
+    });
+
+    modal.classList.add('visible');
+}
+
+function closeARInventory() {
+    document.getElementById('ar-inventory-modal')?.classList.remove('visible');
+}
+
+function equipARItem(itemId, slotType) {
+    let items, slotKey;
+
+    switch (slotType) {
+        case 'weapon':
+            items = GameData.inventory.weapons;
+            slotKey = 'weapon';
+            break;
+        case 'accessory':
+            items = GameData.inventory.accessories;
+            slotKey = 'accessory';
+            break;
+        case 'healing':
+            items = GameData.inventory.healing;
+            slotKey = 'healing';
+            break;
+    }
+
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    GameData.equipped[slotKey] = item;
+    updateARHUD();
+    closeARInventory();
+
+    console.log(`✅ Equipado no AR: ${item.name}`);
 }
 
 // ============================================
@@ -698,4 +856,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const spawner = scene?.systems['monster-spawner'];
         if (spawner) spawner.spawnMonster();
     });
+
+    // AR Inventory Slots - Abrir modal ao clicar
+    document.getElementById('ar-slot-weapon')?.addEventListener('click', () => openARInventory('weapon'));
+    document.getElementById('ar-slot-accessory')?.addEventListener('click', () => openARInventory('accessory'));
+    document.getElementById('ar-slot-healing')?.addEventListener('click', () => openARInventory('healing'));
+
+    // Fechar modal de inventário AR
+    document.getElementById('ar-inv-close')?.addEventListener('click', closeARInventory);
 });

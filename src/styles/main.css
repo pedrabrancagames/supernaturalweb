@@ -12,7 +12,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
@@ -90,8 +91,15 @@ input {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { text-shadow: 0 0 30px rgba(255, 0, 0, 0.5); }
-  50% { text-shadow: 0 0 50px rgba(255, 0, 0, 0.8), 0 0 80px rgba(255, 0, 0, 0.4); }
+
+  0%,
+  100% {
+    text-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+  }
+
+  50% {
+    text-shadow: 0 0 50px rgba(255, 0, 0, 0.8), 0 0 80px rgba(255, 0, 0, 0.4);
+  }
 }
 
 .game-title {
@@ -217,8 +225,8 @@ input {
 
 .menu-card {
   width: 100%;
-  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-  border: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -231,7 +239,7 @@ input {
 
 .menu-card:active {
   transform: scale(0.98);
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .menu-card.primary {
@@ -251,7 +259,7 @@ input {
 
 .menu-desc {
   font-size: 12px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 4px;
 }
 
@@ -319,7 +327,7 @@ input {
 .btn-back {
   width: 40px;
   height: 40px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -372,9 +380,17 @@ input {
   border-radius: 50%;
 }
 
-.dot.red { background: #ff4444; }
-.dot.yellow { background: #ffcc00; }
-.dot.blue { background: #4488ff; }
+.dot.red {
+  background: #ff4444;
+}
+
+.dot.yellow {
+  background: #ffcc00;
+}
+
+.dot.blue {
+  background: #4488ff;
+}
 
 /* ========================================
    INVENTORY SCREEN (Full)
@@ -410,7 +426,7 @@ input {
 
 .inv-item {
   aspect-ratio: 1;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border: 2px solid #222;
   border-radius: 12px;
   display: flex;
@@ -427,7 +443,7 @@ input {
 
 .inv-item.equipped {
   border-color: #ffcc00;
-  background: rgba(255,204,0,0.1);
+  background: rgba(255, 204, 0, 0.1);
 }
 
 .inv-item-icon {
@@ -451,7 +467,7 @@ input {
 }
 
 .monster-card {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid #222;
   border-radius: 12px;
   padding: 15px;
@@ -462,7 +478,7 @@ input {
 }
 
 .monster-card:active {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .monster-icon {
@@ -472,7 +488,7 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
 }
 
@@ -494,8 +510,13 @@ input {
   font-size: 20px;
 }
 
-.monster-status.defeated { color: #44ff44; }
-.monster-status.locked { color: #666; }
+.monster-status.defeated {
+  color: #44ff44;
+}
+
+.monster-status.locked {
+  color: #666;
+}
 
 /* ========================================
    DIARY SCREEN
@@ -518,7 +539,7 @@ input {
 }
 
 .diary-entry {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border-left: 3px solid #cc0000;
   padding: 12px 15px;
   margin-bottom: 10px;
@@ -587,20 +608,23 @@ input {
   border-bottom-color: #cc0000;
 }
 
-.profile-stats, .profile-settings {
-  background: rgba(255,255,255,0.03);
+.profile-stats,
+.profile-settings {
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 15px;
 }
 
-.profile-stats h3, .profile-settings h3 {
+.profile-stats h3,
+.profile-settings h3 {
   font-size: 14px;
   color: #888;
   margin-bottom: 15px;
 }
 
-.stat-row, .setting-row {
+.stat-row,
+.setting-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -608,11 +632,13 @@ input {
   border-bottom: 1px solid #222;
 }
 
-.stat-row:last-child, .setting-row:last-child {
+.stat-row:last-child,
+.setting-row:last-child {
   border-bottom: none;
 }
 
-.stat-row span:first-child, .setting-row span:first-child {
+.stat-row span:first-child,
+.setting-row span:first-child {
   color: #999;
   font-size: 14px;
 }
@@ -659,11 +685,11 @@ input {
   border-radius: 50%;
 }
 
-.toggle input:checked + .slider {
+.toggle input:checked+.slider {
   background-color: #cc0000;
 }
 
-.toggle input:checked + .slider:before {
+.toggle input:checked+.slider:before {
   transform: translateX(24px);
 }
 
@@ -698,7 +724,7 @@ input {
   left: 20px;
   width: 44px;
   height: 44px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   border-radius: 50%;
   font-size: 18px;
   pointer-events: auto;
@@ -712,7 +738,7 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   padding: 8px 12px;
   border-radius: 20px;
 }
@@ -740,7 +766,7 @@ input {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   padding: 8px 12px;
   border-radius: 10px;
   display: none;
@@ -757,14 +783,15 @@ input {
   transform: translate(-50%, -50%);
   width: 40px;
   height: 40px;
-  border: 2px solid rgba(255,255,255,0.8);
+  border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
 }
 
-.ar-crosshair::before, .ar-crosshair::after {
+.ar-crosshair::before,
+.ar-crosshair::after {
   content: '';
   position: absolute;
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .ar-crosshair::before {
@@ -805,50 +832,39 @@ input {
   opacity: 1;
 }
 
-.ar-radar {
+/* Mini-Mapa Real com Leaflet */
+.ar-minimap {
   position: absolute;
   bottom: 30px;
   left: 20px;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: rgba(0,20,0,0.8);
-  border: 2px solid #00ff00;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
   overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.radar-sweep {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 50%;
-  background: linear-gradient(90deg, transparent, rgba(0,255,0,0.3));
-  transform-origin: bottom left;
-  animation: radar-spin 3s linear infinite;
+.ar-minimap #ar-map {
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes radar-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.radar-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
-  background: #00ff00;
+/* Marcador do jogador no mini-mapa */
+.player-marker {
+  width: 12px;
+  height: 12px;
+  background: #00aaff;
+  border: 2px solid #fff;
   border-radius: 50%;
+  box-shadow: 0 0 10px #00aaff;
 }
 
 .ar-location {
   position: absolute;
   bottom: 130px;
   left: 20px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 10px;
@@ -867,7 +883,7 @@ input {
 .ar-slot {
   width: 50px;
   height: 50px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   border: 2px solid #444;
   border-radius: 10px;
   display: flex;
@@ -876,9 +892,17 @@ input {
   font-size: 22px;
 }
 
-.ar-slot.weapon { border-color: #ff6b6b; }
-.ar-slot.accessory { border-color: #4ecdc4; }
-.ar-slot.healing { border-color: #95e1a3; }
+.ar-slot.weapon {
+  border-color: #ff6b6b;
+}
+
+.ar-slot.accessory {
+  border-color: #4ecdc4;
+}
+
+.ar-slot.healing {
+  border-color: #95e1a3;
+}
 
 .ar-btn-fire {
   position: absolute;
@@ -892,7 +916,7 @@ input {
   border-radius: 50%;
   font-size: 24px;
   pointer-events: auto;
-  box-shadow: 0 4px 15px rgba(255,0,0,0.4);
+  box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
 }
 
 .ar-btn-fire:active {
@@ -901,15 +925,17 @@ input {
 
 .ar-btn-spawn {
   position: absolute;
-  bottom: 110px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
+  bottom: 30px;
+  right: 50%;
+  transform: translateX(120px);
+  width: 50px;
+  height: 50px;
   background: linear-gradient(145deg, #44ff44, #00cc00);
   border: 2px solid #fff;
   border-radius: 50%;
-  font-size: 22px;
+  font-size: 24px;
   pointer-events: auto;
+  box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
 }
 
 /* AR Quick Inventory Modal */
@@ -918,7 +944,7 @@ input {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(10,10,10,0.95);
+  background: rgba(10, 10, 10, 0.95);
   border-radius: 20px 20px 0 0;
   padding: 20px;
   transform: translateY(100%);
@@ -956,7 +982,7 @@ input {
 
 .ar-inv-item {
   aspect-ratio: 1;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 2px solid #333;
   border-radius: 10px;
   display: flex;
@@ -971,6 +997,7 @@ input {
 }
 
 /* Hide A-Frame buttons */
-.a-enter-vr-button, .a-enter-ar-button {
+.a-enter-vr-button,
+.a-enter-ar-button {
   display: none !important;
 }
