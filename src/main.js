@@ -423,6 +423,7 @@ AFRAME.registerSystem('combat', {
     init: function () {
         this.raycaster = new THREE.Raycaster();
         this.monsters = [];
+        this.loot = [];
     },
 
     registerMonster: function (el) {
@@ -438,13 +439,22 @@ AFRAME.registerSystem('combat', {
         }
     },
 
+    registerLoot: function (el) {
+        if (!this.loot.includes(el)) {
+            this.loot.push(el);
+        }
+    },
+
+    unregisterLoot: function (el) {
+        const idx = this.loot.indexOf(el);
+        if (idx !== -1) {
+            this.loot.splice(idx, 1);
+        }
+    },
+
     fire: function () {
         const camera = this.el.sceneEl.camera;
         const weapon = GameData.equipped.weapon;
-
-        if (!camera || !weapon) {
-            return { hit: false, reason: 'no_weapon' };
-        }
 
         const cameraPosition = new THREE.Vector3();
         const cameraDirection = new THREE.Vector3();
@@ -454,6 +464,12 @@ AFRAME.registerSystem('combat', {
 
         this.raycaster.set(cameraPosition, cameraDirection);
 
+        // Se não tem arma (mão vazia), tenta coletar loot
+        if (!weapon) {
+            return this.tryCollectLoot();
+        }
+
+        // Com arma, tenta atacar monstros
         const meshes = [];
         this.monsters.forEach(monster => {
             const mesh = monster.getObject3D('mesh');
@@ -461,7 +477,8 @@ AFRAME.registerSystem('combat', {
         });
 
         if (meshes.length === 0) {
-            return { hit: false, reason: 'no_monsters' };
+            // Se não tem monstros, tenta coletar loot mesmo com arma
+            return this.tryCollectLoot();
         }
 
         const intersects = this.raycaster.intersectObjects(meshes, true);
@@ -491,10 +508,66 @@ AFRAME.registerSystem('combat', {
         return { hit: false, reason: 'missed' };
     },
 
+    tryCollectLoot: function () {
+        if (this.loot.length === 0) {
+            return { hit: false, reason: 'no_loot' };
+        }
+
+        const camera = this.el.sceneEl.camera;
+        const cameraPosition = new THREE.Vector3();
+        const cameraDirection = new THREE.Vector3();
+
+        camera.getWorldPosition(cameraPosition);
+        camera.getWorldDirection(cameraDirection);
+
+        this.raycaster.set(cameraPosition, cameraDirection);
+
+        const meshes = [];
+        this.loot.forEach(lootEl => {
+            const mesh = lootEl.getObject3D('mesh');
+            if (mesh) meshes.push(mesh);
+        });
+
+        if (meshes.length === 0) {
+            return { hit: false, reason: 'no_loot' };
+        }
+
+        const intersects = this.raycaster.intersectObjects(meshes, true);
+
+        if (intersects.length > 0) {
+            const hitObject = intersects[0];
+            const lootEl = this.findLootFromMesh(hitObject.object);
+
+            if (lootEl) {
+                const lootComponent = lootEl.components['ar-loot'];
+                lootComponent.collect();
+
+                return {
+                    hit: true,
+                    collected: true,
+                    item: lootComponent.data.name
+                };
+            }
+        }
+
+        return { hit: false, reason: 'missed' };
+    },
+
     findMonsterFromMesh: function (mesh) {
         let current = mesh;
         while (current) {
             if (current.el && current.el.hasAttribute('ar-monster')) {
+                return current.el;
+            }
+            current = current.parent;
+        }
+        return null;
+    },
+
+    findLootFromMesh: function (mesh) {
+        let current = mesh;
+        while (current) {
+            if (current.el && current.el.hasAttribute('ar-loot')) {
                 return current.el;
             }
             current = current.parent;
@@ -507,6 +580,11 @@ AFRAME.registerSystem('monster-spawner', {
     init: function () {
         this.reticle = null;
         this.lastHitPose = null;
+        this.autoSpawnEnabled = true;
+        this.spawnInterval = null;
+        this.lootSpawnInterval = null;
+        this.maxMonsters = 3;
+        this.maxLoot = 5;
 
         this.el.sceneEl.addEventListener('loaded', () => {
             this.reticle = document.getElementById('reticle');
@@ -520,25 +598,60 @@ AFRAME.registerSystem('monster-spawner', {
                 };
             }
         });
+
+        // Iniciar auto-spawn quando entra em AR
+        this.el.sceneEl.addEventListener('enter-vr', () => {
+            if (this.el.sceneEl.is('ar-mode')) {
+                this.startAutoSpawn();
+            }
+        });
+
+        this.el.sceneEl.addEventListener('exit-vr', () => {
+            this.stopAutoSpawn();
+        });
+    },
+
+    startAutoSpawn: function () {
+        if (this.spawnInterval) return;
+
+        // Spawn inicial
+        setTimeout(() => {
+            this.spawnMonster();
+            this.spawnLoot();
+        }, 2000);
+
+        // Spawn de monstros a cada 30 segundos
+        this.spawnInterval = setInterval(() => {
+            const monsters = document.querySelectorAll('[ar-monster]');
+            if (monsters.length < this.maxMonsters) {
+                this.spawnMonster();
+            }
+        }, 30000);
+
+        // Spawn de loot a cada 20 segundos
+        this.lootSpawnInterval = setInterval(() => {
+            const loot = document.querySelectorAll('[ar-loot]');
+            if (loot.length < this.maxLoot) {
+                this.spawnLoot();
+            }
+        }, 20000);
+
+        console.log('🎮 Auto-spawn ativado');
+    },
+
+    stopAutoSpawn: function () {
+        if (this.spawnInterval) {
+            clearInterval(this.spawnInterval);
+            this.spawnInterval = null;
+        }
+        if (this.lootSpawnInterval) {
+            clearInterval(this.lootSpawnInterval);
+            this.lootSpawnInterval = null;
+        }
     },
 
     spawnMonster: function (type = null) {
-        let position;
-
-        if (this.lastHitPose && this.reticle && this.reticle.getAttribute('visible')) {
-            const reticlePos = this.reticle.getAttribute('position');
-            position = { x: reticlePos.x, y: reticlePos.y, z: reticlePos.z };
-        } else {
-            const camera = document.getElementById('camera');
-            const cameraPos = camera.getAttribute('position');
-            const cameraRot = camera.getAttribute('rotation');
-            const angle = THREE.MathUtils.degToRad(cameraRot.y);
-            position = {
-                x: cameraPos.x - Math.sin(angle) * 2,
-                y: 0,
-                z: cameraPos.z - Math.cos(angle) * 2
-            };
-        }
+        const position = this.getSpawnPosition();
 
         const types = ['werewolf', 'vampire', 'ghost', 'demon'];
         const monsterType = type || types[Math.floor(Math.random() * types.length)];
@@ -556,7 +669,176 @@ AFRAME.registerSystem('monster-spawner', {
         document.getElementById('monsters-container').appendChild(monster);
         showMonsterHP(monsterType, hpMap[monsterType], hpMap[monsterType]);
 
+        console.log(`🐺 Monstro ${monsterType} spawnou automaticamente!`);
+
         return monster;
+    },
+
+    spawnLoot: function () {
+        const position = this.getSpawnPosition();
+
+        // Tipos de loot possíveis
+        const lootTypes = [
+            { id: 'bandage', icon: '🩹', name: 'Bandagem', category: 'healing', healAmount: 20 },
+            { id: 'iron_bar', icon: '🔩', name: 'Barra de Ferro', category: 'weapons', damage: 25 },
+            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35 },
+            { id: 'medkit', icon: '💊', name: 'Kit Médico', category: 'healing', healAmount: 50 },
+            { id: 'silver_coin', icon: '🪙', name: 'Moeda de Prata', category: 'misc' }
+        ];
+
+        const loot = lootTypes[Math.floor(Math.random() * lootTypes.length)];
+
+        const entity = document.createElement('a-entity');
+        entity.setAttribute('ar-loot', loot);
+        entity.setAttribute('position', position);
+
+        document.getElementById('monsters-container').appendChild(entity);
+
+        console.log(`✨ Loot ${loot.name} spawnou!`);
+
+        return entity;
+    },
+
+    getSpawnPosition: function () {
+        if (this.lastHitPose && this.reticle && this.reticle.getAttribute('visible')) {
+            const reticlePos = this.reticle.getAttribute('position');
+            return { x: reticlePos.x, y: reticlePos.y, z: reticlePos.z };
+        } else {
+            const camera = document.getElementById('camera');
+            const cameraPos = camera.getAttribute('position');
+            const cameraRot = camera.getAttribute('rotation');
+
+            // Spawn em posição aleatória ao redor do jogador
+            const angle = THREE.MathUtils.degToRad(cameraRot.y + (Math.random() - 0.5) * 120);
+            const distance = 1.5 + Math.random() * 1.5;
+
+            return {
+                x: cameraPos.x - Math.sin(angle) * distance,
+                y: 0,
+                z: cameraPos.z - Math.cos(angle) * distance
+            };
+        }
+    }
+});
+
+// ============================================
+// COMPONENTE DE LOOT COLETÁVEL
+// ============================================
+
+AFRAME.registerComponent('ar-loot', {
+    schema: {
+        id: { type: 'string', default: 'bandage' },
+        icon: { type: 'string', default: '🎁' },
+        name: { type: 'string', default: 'Item' },
+        category: { type: 'string', default: 'misc' },
+        healAmount: { type: 'number', default: 0 },
+        damage: { type: 'number', default: 0 }
+    },
+
+    init: function () {
+        // Criar visual do loot - esfera brilhante
+        this.el.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.15
+        });
+
+        // Cor baseada na categoria
+        const colorMap = {
+            healing: '#44ff44',
+            weapons: '#ff6b6b',
+            misc: '#ffcc00'
+        };
+
+        this.el.setAttribute('material', {
+            color: colorMap[this.data.category] || '#ffffff',
+            emissive: colorMap[this.data.category] || '#ffffff',
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        // Animação de flutuação
+        this.el.setAttribute('animation', {
+            property: 'position',
+            dir: 'alternate',
+            loop: true,
+            dur: 1000,
+            easing: 'easeInOutSine',
+            to: `${this.el.getAttribute('position').x} ${this.el.getAttribute('position').y + 0.1} ${this.el.getAttribute('position').z}`
+        });
+
+        // Animação de rotação
+        this.el.setAttribute('animation__rotate', {
+            property: 'rotation',
+            to: '0 360 0',
+            loop: true,
+            dur: 3000,
+            easing: 'linear'
+        });
+
+        // Registrar no sistema de combate para detecção
+        const combatSystem = this.el.sceneEl.systems['combat'];
+        if (combatSystem) {
+            combatSystem.registerLoot(this.el);
+        }
+    },
+
+    collect: function () {
+        // Adicionar ao inventário
+        const category = this.data.category;
+        let added = false;
+
+        if (category === 'healing') {
+            const item = GameData.inventory.healing.find(i => i.id === this.data.id);
+            if (item) {
+                item.quantity++;
+                added = true;
+            }
+        } else if (category === 'weapons') {
+            const item = GameData.inventory.weapons.find(i => i.id === this.data.id);
+            if (item) {
+                item.quantity++;
+                added = true;
+            }
+        }
+
+        if (added) {
+            GameData.player.itemsCollected++;
+
+            // Feedback visual
+            const feedback = document.getElementById('ar-hit-feedback');
+            if (feedback) {
+                feedback.textContent = `+1 ${this.data.icon}`;
+                feedback.style.color = '#ffcc00';
+                feedback.className = 'ar-hit-feedback hit';
+                setTimeout(() => {
+                    feedback.className = 'ar-hit-feedback';
+                    feedback.style.color = '';
+                }, 500);
+            }
+
+            // Vibrar
+            if (navigator.vibrate) {
+                navigator.vibrate([30, 20, 30]);
+            }
+
+            console.log(`✨ Coletou: ${this.data.name}`);
+        }
+
+        // Remover do mundo
+        const combatSystem = this.el.sceneEl.systems['combat'];
+        if (combatSystem) {
+            combatSystem.unregisterLoot(this.el);
+        }
+
+        this.el.parentNode.removeChild(this.el);
+    },
+
+    remove: function () {
+        const combatSystem = this.el.sceneEl.systems['combat'];
+        if (combatSystem) {
+            combatSystem.unregisterLoot(this.el);
+        }
     }
 });
 
