@@ -91,6 +91,8 @@ function goto(screenId) {
             updateProfileStats();
         } else if (screenId === 'hunt') {
             startARMode();
+        } else if (screenId === 'map') {
+            initFullMap();
         }
     }
 
@@ -318,7 +320,8 @@ function updateARHUD() {
     const healingSlot = document.getElementById('ar-slot-healing');
 
     if (weaponSlot) {
-        weaponSlot.querySelector('span').textContent = GameData.equipped.weapon?.icon || '🤛';
+        // Mão aberta (✋) quando sem arma = modo coleta
+        weaponSlot.querySelector('span').textContent = GameData.equipped.weapon?.icon || '✋';
     }
     if (accessorySlot) {
         accessorySlot.querySelector('span').textContent = GameData.equipped.accessory?.icon || '➖';
@@ -721,7 +724,84 @@ function updateARLocation() {
 }
 
 // ============================================
-// AR INVENTORY MODAL
+// MAPA FULL (TELA MAP)
+// ============================================
+
+let fullMap = null;
+let fullMapMarker = null;
+
+function initFullMap() {
+    const mapContainer = document.getElementById('full-map');
+    if (!mapContainer) return;
+
+    // Primeiro obter localização
+    if (!GeoState.currentPosition) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                GeoState.currentPosition = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude
+                };
+                createFullMap();
+            },
+            (err) => {
+                console.error('GPS error:', err);
+                // Usar localização padrão (São Paulo)
+                GeoState.currentPosition = { latitude: -23.5505, longitude: -46.6333 };
+                createFullMap();
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    } else {
+        createFullMap();
+    }
+}
+
+function createFullMap() {
+    const mapContainer = document.getElementById('full-map');
+    if (!mapContainer || !GeoState.currentPosition) return;
+
+    // Destruir mapa anterior se existir
+    if (fullMap) {
+        fullMap.remove();
+        fullMap = null;
+    }
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Criar mapa Leaflet
+    fullMap = L.map('full-map', {
+        center: [latitude, longitude],
+        zoom: 16,
+        zoomControl: true
+    });
+
+    // Tile layer escuro
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(fullMap);
+
+    // Marcador do jogador
+    const playerIcon = L.divIcon({
+        className: 'player-marker',
+        html: '<div style="width:16px;height:16px;background:#00aaff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 15px #00aaff;"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    fullMapMarker = L.marker([latitude, longitude], { icon: playerIcon })
+        .addTo(fullMap)
+        .bindPopup('Você está aqui');
+
+    // Forçar redimensionamento
+    setTimeout(() => fullMap.invalidateSize(), 100);
+
+    console.log('🗺️ Mapa full inicializado');
+}
+
+// ============================================
+// AR INVENTORY MODAL - COM OPÇÃO NENHUM
 // ============================================
 
 let currentARSlotType = null;
@@ -737,34 +817,86 @@ function openARInventory(slotType) {
 
     let items = [];
     let equippedItem = null;
+    let noneIcon = '➖';
+    let noneLabel = 'Nenhum';
 
     switch (slotType) {
         case 'weapon':
-            items = GameData.inventory.weapons;
+            items = GameData.inventory.weapons.filter(w => w.id !== 'fist');
             equippedItem = GameData.equipped.weapon;
+            noneIcon = '✋';
+            noneLabel = 'Coletar';
             break;
         case 'accessory':
             items = GameData.inventory.accessories;
             equippedItem = GameData.equipped.accessory;
+            noneIcon = '➖';
+            noneLabel = 'Nenhum';
             break;
         case 'healing':
             items = GameData.inventory.healing;
-            equippedItem = GameData.equipped.healing;
+            equippedItem = null; // Cura é sempre "nenhum" após usar
+            noneIcon = '➖';
+            noneLabel = 'Nenhum';
             break;
     }
 
+    // Adicionar opção "Nenhum" primeiro
+    const noneEl = document.createElement('div');
+    const isNoneEquipped = (slotType === 'weapon' && (!equippedItem || equippedItem.id === 'fist')) ||
+        (slotType === 'accessory' && !equippedItem) ||
+        (slotType === 'healing' && !equippedItem);
+    noneEl.className = `ar-inv-item ${isNoneEquipped ? 'equipped' : ''}`;
+    noneEl.innerHTML = `<span>${noneIcon}</span><small style="font-size:8px;color:#888;">${noneLabel}</small>`;
+    noneEl.addEventListener('click', () => {
+        selectNone(slotType);
+    });
+    grid.appendChild(noneEl);
+
+    // Adicionar itens
     items.forEach(item => {
         const isEquipped = equippedItem && equippedItem.id === item.id;
         const el = document.createElement('div');
         el.className = `ar-inv-item ${isEquipped ? 'equipped' : ''}`;
-        el.innerHTML = `<span>${item.icon}</span>`;
+
+        // Para cura, mostrar quantidade
+        if (slotType === 'healing') {
+            el.innerHTML = `<span>${item.icon}</span><small style="font-size:8px;color:#888;">x${item.quantity}</small>`;
+        } else {
+            el.innerHTML = `<span>${item.icon}</span>`;
+        }
+
         el.addEventListener('click', () => {
-            equipARItem(item.id, slotType);
+            if (slotType === 'healing') {
+                useHealingItem(item);
+            } else {
+                equipARItem(item.id, slotType);
+            }
         });
         grid.appendChild(el);
     });
 
     modal.classList.add('visible');
+}
+
+function selectNone(slotType) {
+    switch (slotType) {
+        case 'weapon':
+            // Modo coleta - mão aberta
+            GameData.equipped.weapon = null;
+            break;
+        case 'accessory':
+            // Remover efeito atual
+            removeAccessoryEffect();
+            GameData.equipped.accessory = null;
+            break;
+        case 'healing':
+            GameData.equipped.healing = null;
+            break;
+    }
+    updateARHUD();
+    closeARInventory();
+    console.log(`✋ Slot ${slotType} vazio - modo coleta`);
 }
 
 function closeARInventory() {
@@ -792,11 +924,90 @@ function equipARItem(itemId, slotType) {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    GameData.equipped[slotKey] = item;
+    // Se for acessório, aplicar efeito
+    if (slotType === 'accessory') {
+        removeAccessoryEffect();
+        GameData.equipped[slotKey] = item;
+        applyAccessoryEffect(item);
+    } else {
+        GameData.equipped[slotKey] = item;
+    }
+
     updateARHUD();
     closeARInventory();
 
-    console.log(`✅ Equipado no AR: ${item.name}`);
+    console.log(`✅ Equipado: ${item.name}`);
+}
+
+function useHealingItem(item) {
+    if (!item || item.quantity <= 0) {
+        console.log('❌ Sem itens de cura');
+        closeARInventory();
+        return;
+    }
+
+    // Aplicar cura
+    const prevHp = GameData.player.hp;
+    GameData.player.hp = Math.min(GameData.player.hp + item.healAmount, GameData.player.maxHp);
+    const healed = GameData.player.hp - prevHp;
+
+    // Reduzir quantidade
+    item.quantity--;
+
+    // Vibrar
+    if (navigator.vibrate) {
+        navigator.vibrate([50, 30, 50, 30, 50]);
+    }
+
+    // Feedback visual
+    const feedback = document.getElementById('ar-hit-feedback');
+    if (feedback) {
+        feedback.textContent = `+${healed} ❤️`;
+        feedback.style.color = '#44ff44';
+        feedback.className = 'ar-hit-feedback hit';
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+            feedback.style.color = '';
+        }, 500);
+    }
+
+    // Slot de cura fica vazio após usar
+    GameData.equipped.healing = null;
+
+    updateARHUD();
+    closeARInventory();
+
+    console.log(`💊 Curou ${healed} HP! Total: ${GameData.player.hp}/${GameData.player.maxHp}`);
+}
+
+function applyAccessoryEffect(accessory) {
+    if (!accessory) return;
+
+    const scene = document.getElementById('ar-scene');
+    if (!scene) return;
+
+    switch (accessory.id) {
+        case 'camera':
+            // Efeito de filmadora - grayscale
+            scene.style.filter = 'grayscale(100%)';
+            break;
+        case 'uv_light':
+            // Efeito de lanterna UV
+            scene.style.filter = 'hue-rotate(270deg) brightness(1.2)';
+            break;
+        case 'emf':
+            // EMF não tem efeito visual
+            break;
+    }
+
+    console.log(`🔧 Efeito de ${accessory.name} aplicado`);
+}
+
+function removeAccessoryEffect() {
+    const scene = document.getElementById('ar-scene');
+    if (scene) {
+        scene.style.filter = '';
+    }
 }
 
 // ============================================
