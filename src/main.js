@@ -1,6 +1,6 @@
 /**
  * Supernatural AR - Main Application
- * Sistema de Inventário com 3 Slots + Combate AR
+ * Sistema completo com navegação, inventário, combate e geolocalização
  */
 
 // ============================================
@@ -8,7 +8,17 @@
 // ============================================
 
 const GameData = {
-    // Inventário do jogador (todos os itens coletados)
+    player: {
+        name: 'Caçador',
+        level: 1,
+        hp: 100,
+        maxHp: 100,
+        xp: 0,
+        monstersDefeated: 0,
+        huntsCompleted: 0,
+        itemsCollected: 0
+    },
+
     inventory: {
         weapons: [
             { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [] },
@@ -18,9 +28,9 @@ const GameData = {
             { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'] }
         ],
         accessories: [
-            { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost', filter: 'grayscale' },
-            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', quantity: 1, effect: 'reveal_messages', filter: 'uv' },
-            { id: 'emf', name: 'Detector EMF', icon: '📡', quantity: 1, effect: 'detect_nearby', filter: null }
+            { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
+            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', quantity: 1, effect: 'reveal_messages' },
+            { id: 'emf', name: 'Detector EMF', icon: '📡', quantity: 1, effect: 'detect_nearby' }
         ],
         healing: [
             { id: 'bandage', name: 'Bandagem', icon: '🩹', quantity: 5, healAmount: 20 },
@@ -29,357 +39,116 @@ const GameData = {
         ]
     },
 
-    // Itens equipados (1 de cada tipo)
     equipped: {
         weapon: null,
         accessory: null,
         healing: null
     },
 
-    // Status do jogador
-    player: {
-        hp: 100,
-        maxHp: 100
-    },
+    bestiary: [
+        { id: 'werewolf', name: 'Lobisomem', icon: '🐺', type: 'Licantropo', defeated: false, weakness: 'Prata' },
+        { id: 'vampire', name: 'Vampiro', icon: '🧛', type: 'Morto-Vivo', defeated: false, weakness: 'Estaca/Sol' },
+        { id: 'ghost', name: 'Fantasma', icon: '👻', type: 'Espírito', defeated: false, weakness: 'Ferro/Sal' },
+        { id: 'demon', name: 'Demônio', icon: '😈', type: 'Sobrenatural', defeated: false, weakness: 'Água Benta' }
+    ],
 
-    // Tab atual do inventário
-    currentTab: 'weapons'
+    diary: [],
+
+    currentTab: 'weapons',
+    currentScreen: 'splash'
 };
 
 // Inicializar com punho equipado
 GameData.equipped.weapon = GameData.inventory.weapons[0];
 
 // ============================================
-// COMPONENTE: ar-monster
+// NAVEGAÇÃO
 // ============================================
-AFRAME.registerComponent('ar-monster', {
-    schema: {
-        type: { type: 'string', default: 'werewolf' },
-        hp: { type: 'number', default: 100 },
-        maxHp: { type: 'number', default: 100 }
-    },
 
-    init: function () {
-        const el = this.el;
-        const data = this.data;
+function goto(screenId) {
+    // Esconder tela atual
+    const currentScreen = document.querySelector('.screen.active');
+    if (currentScreen) {
+        currentScreen.classList.remove('active');
+        currentScreen.classList.add('hidden');
+    }
 
-        const modelMap = {
-            werewolf: '#werewolf-model',
-            vampire: '#vampire-model',
-            ghost: '#ghost-model',
-            demon: '#demon-model'
-        };
+    // Mostrar nova tela
+    const newScreen = document.getElementById(`screen-${screenId}`);
+    if (newScreen) {
+        newScreen.classList.remove('hidden');
+        newScreen.classList.add('active');
+        GameData.currentScreen = screenId;
 
-        el.setAttribute('gltf-model', modelMap[data.type] || '#werewolf-model');
-        el.setAttribute('scale', '0.5 0.5 0.5');
-
-        el.setAttribute('animation', {
-            property: 'rotation',
-            to: '0 360 0',
-            loop: true,
-            dur: 8000,
-            easing: 'linear'
-        });
-
-        const combatSystem = this.el.sceneEl.systems['combat'];
-        if (combatSystem) {
-            combatSystem.registerMonster(el);
-        }
-
-        console.log(`🐺 Monstro spawned: ${data.type} com ${data.hp} HP`);
-    },
-
-    takeDamage: function (amount, weaponId) {
-        // Verificar se a arma é efetiva contra este monstro
-        const weapon = GameData.inventory.weapons.find(w => w.id === weaponId);
-        let actualDamage = amount;
-        let isWeakness = false;
-
-        if (weapon && weapon.weakness.includes(this.data.type)) {
-            actualDamage = amount * 2; // Dano dobrado se for fraqueza
-            isWeakness = true;
-            console.log(`⚡ FRAQUEZA! Dano dobrado: ${actualDamage}`);
-        } else if (weapon && weapon.weakness.length > 0 && !weapon.weakness.includes(this.data.type)) {
-            actualDamage = Math.floor(amount * 0.3); // Dano reduzido se não for fraqueza
-            console.log(`🛡️ Resistente! Dano reduzido: ${actualDamage}`);
-        }
-
-        this.data.hp -= actualDamage;
-
-        // Efeito visual de dano
-        const mesh = this.el.getObject3D('mesh');
-        if (mesh) {
-            mesh.traverse((node) => {
-                if (node.isMesh && node.material) {
-                    const originalColor = node.material.color.clone();
-                    node.material.color.setHex(isWeakness ? 0xffff00 : 0xff0000);
-                    setTimeout(() => {
-                        node.material.color.copy(originalColor);
-                    }, 150);
-                }
-            });
-        }
-
-        updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
-        console.log(`💥 Monstro tomou ${actualDamage} de dano! HP restante: ${this.data.hp}`);
-
-        if (this.data.hp <= 0) {
-            this.die();
-        }
-
-        return { damage: actualDamage, isWeakness, remainingHp: this.data.hp };
-    },
-
-    die: function () {
-        console.log(`💀 Monstro derrotado: ${this.data.type}`);
-
-        this.el.setAttribute('animation__death', {
-            property: 'scale',
-            to: '0 0 0',
-            dur: 500,
-            easing: 'easeInQuad'
-        });
-
-        const combatSystem = this.el.sceneEl.systems['combat'];
-        if (combatSystem) {
-            combatSystem.unregisterMonster(this.el);
-        }
-
-        setTimeout(() => {
-            this.el.parentNode.removeChild(this.el);
-            updateMonsterCount();
-            hideMonsterHP();
-        }, 600);
-    },
-
-    remove: function () {
-        const combatSystem = this.el.sceneEl.systems['combat'];
-        if (combatSystem) {
-            combatSystem.unregisterMonster(this.el);
+        // Ações específicas por tela
+        if (screenId === 'home') {
+            updateHomeStats();
+        } else if (screenId === 'inventory') {
+            renderInventoryFull();
+        } else if (screenId === 'bestiary') {
+            renderBestiary();
+        } else if (screenId === 'profile') {
+            updateProfileStats();
+        } else if (screenId === 'hunt') {
+            startARMode();
         }
     }
-});
+
+    console.log(`📱 Navegou para: ${screenId}`);
+}
+
+function goBack() {
+    goto('home');
+}
 
 // ============================================
-// SISTEMA: combat
+// SPLASH SCREEN
 // ============================================
-AFRAME.registerSystem('combat', {
-    schema: {},
 
-    init: function () {
-        this.raycaster = new THREE.Raycaster();
-        this.monsters = [];
-        console.log('⚔️ Sistema de combate inicializado');
-    },
+function initSplash() {
+    const progress = document.getElementById('splash-progress');
+    const status = document.getElementById('splash-status');
 
-    registerMonster: function (el) {
-        if (!this.monsters.includes(el)) {
-            this.monsters.push(el);
-            console.log(`📝 Monstro registrado. Total: ${this.monsters.length}`);
-        }
-    },
+    const steps = [
+        { progress: 20, text: 'Carregando recursos...' },
+        { progress: 40, text: 'Verificando GPS...' },
+        { progress: 60, text: 'Preparando AR...' },
+        { progress: 80, text: 'Invocando entidades...' },
+        { progress: 100, text: 'Pronto!' }
+    ];
 
-    unregisterMonster: function (el) {
-        const idx = this.monsters.indexOf(el);
-        if (idx !== -1) {
-            this.monsters.splice(idx, 1);
-            console.log(`📝 Monstro removido. Total: ${this.monsters.length}`);
-        }
-    },
+    let currentStep = 0;
 
-    fire: function () {
-        const camera = this.el.sceneEl.camera;
-        const equippedWeapon = GameData.equipped.weapon;
-
-        if (!camera) {
-            console.warn('❌ Câmera não encontrada');
-            return { hit: false };
-        }
-
-        if (!equippedWeapon) {
-            console.log('🤷 Nenhuma arma equipada');
-            return { hit: false, reason: 'no_weapon' };
-        }
-
-        const cameraPosition = new THREE.Vector3();
-        const cameraDirection = new THREE.Vector3();
-
-        camera.getWorldPosition(cameraPosition);
-        camera.getWorldDirection(cameraDirection);
-
-        this.raycaster.set(cameraPosition, cameraDirection);
-
-        const meshes = [];
-        this.monsters.forEach(monster => {
-            const mesh = monster.getObject3D('mesh');
-            if (mesh) {
-                meshes.push(mesh);
-            }
-        });
-
-        if (meshes.length === 0) {
-            console.log('🎯 Nenhum monstro na cena');
-            return { hit: false, reason: 'no_monsters' };
-        }
-
-        const intersects = this.raycaster.intersectObjects(meshes, true);
-
-        if (intersects.length > 0) {
-            const hitObject = intersects[0];
-            const monsterEl = this.findMonsterFromMesh(hitObject.object);
-
-            if (monsterEl) {
-                const monsterComponent = monsterEl.components['ar-monster'];
-                const result = monsterComponent.takeDamage(equippedWeapon.damage, equippedWeapon.id);
-
-                if (navigator.vibrate) {
-                    navigator.vibrate(result.isWeakness ? [100, 50, 100] : [50, 30, 50]);
-                }
-
-                return {
-                    hit: true,
-                    monster: monsterComponent.data.type,
-                    damage: result.damage,
-                    isWeakness: result.isWeakness,
-                    remainingHp: result.remainingHp,
-                    point: hitObject.point
-                };
-            }
-        }
-
-        return { hit: false, reason: 'missed' };
-    },
-
-    findMonsterFromMesh: function (mesh) {
-        let current = mesh;
-        while (current) {
-            if (current.el && current.el.hasAttribute('ar-monster')) {
-                return current.el;
-            }
-            current = current.parent;
-        }
-        return null;
-    }
-});
-
-// ============================================
-// SISTEMA: monster-spawner
-// ============================================
-AFRAME.registerSystem('monster-spawner', {
-    init: function () {
-        this.sceneEl = this.el.sceneEl;
-        this.reticle = null;
-        this.lastHitPose = null;
-
-        this.sceneEl.addEventListener('loaded', () => {
-            this.reticle = document.getElementById('reticle');
-            console.log('🎯 Monster Spawner inicializado');
-        });
-
-        this.sceneEl.addEventListener('ar-hit-test-achieved', (e) => {
-            if (this.reticle) {
-                this.reticle.setAttribute('visible', true);
-                this.lastHitPose = {
-                    position: this.reticle.getAttribute('position'),
-                    rotation: this.reticle.getAttribute('rotation')
-                };
-            }
-        });
-    },
-
-    spawnMonster: function (type = null) {
-        let position;
-        let rotation = { x: 0, y: 0, z: 0 };
-
-        if (this.lastHitPose && this.reticle && this.reticle.getAttribute('visible')) {
-            const reticlePos = this.reticle.getAttribute('position');
-            position = { x: reticlePos.x, y: reticlePos.y, z: reticlePos.z };
+    const interval = setInterval(() => {
+        if (currentStep < steps.length) {
+            progress.style.width = `${steps[currentStep].progress}%`;
+            status.textContent = steps[currentStep].text;
+            currentStep++;
         } else {
-            const camera = document.getElementById('camera');
-            const cameraPos = camera.getAttribute('position');
-            const cameraRot = camera.getAttribute('rotation');
-
-            const angle = THREE.MathUtils.degToRad(cameraRot.y);
-            position = {
-                x: cameraPos.x - Math.sin(angle) * 2,
-                y: 0,
-                z: cameraPos.z - Math.cos(angle) * 2
-            };
+            clearInterval(interval);
+            setTimeout(() => goto('home'), 500);
         }
-
-        const types = ['werewolf', 'vampire', 'ghost', 'demon'];
-        const monsterType = type || types[Math.floor(Math.random() * types.length)];
-
-        const hpMap = {
-            werewolf: 100,
-            vampire: 80,
-            ghost: 60,
-            demon: 120
-        };
-
-        const monster = document.createElement('a-entity');
-        monster.setAttribute('ar-monster', {
-            type: monsterType,
-            hp: hpMap[monsterType],
-            maxHp: hpMap[monsterType]
-        });
-        monster.setAttribute('position', position);
-        monster.setAttribute('rotation', rotation);
-
-        const container = document.getElementById('monsters-container');
-        container.appendChild(monster);
-
-        updateMonsterCount();
-        showMonsterHP(monsterType, hpMap[monsterType], hpMap[monsterType]);
-
-        console.log(`✨ Monstro spawnado: ${monsterType} em`, position);
-
-        return monster;
-    }
-});
+    }, 600);
+}
 
 // ============================================
-// SISTEMA DE INVENTÁRIO
+// HOME SCREEN
 // ============================================
 
-function openInventory(slotType = null) {
-    const modal = document.getElementById('inventory-modal');
-    modal.classList.add('visible');
-
-    // Se um tipo foi especificado, abrir nessa tab
-    if (slotType) {
-        const tabMap = {
-            weapon: 'weapons',
-            accessory: 'accessories',
-            healing: 'healing'
-        };
-        switchTab(tabMap[slotType] || 'weapons');
-    }
-
-    renderInventory();
+function updateHomeStats() {
+    document.getElementById('stat-monsters').textContent = GameData.player.monstersDefeated;
+    document.getElementById('stat-hunts').textContent = GameData.player.huntsCompleted;
+    document.getElementById('stat-items').textContent = GameData.player.itemsCollected;
 }
 
-function closeInventory() {
-    const modal = document.getElementById('inventory-modal');
-    modal.classList.remove('visible');
-}
+// ============================================
+// INVENTORY SCREEN (Full)
+// ============================================
 
-function switchTab(tabName) {
-    GameData.currentTab = tabName;
+function renderInventoryFull() {
+    const grid = document.getElementById('inventory-full-grid');
+    if (!grid) return;
 
-    // Atualizar tabs visuais
-    document.querySelectorAll('.inventory-tab').forEach(tab => {
-        tab.classList.remove('active');
-        if (tab.dataset.tab === tabName) {
-            tab.classList.add('active');
-        }
-    });
-
-    renderInventory();
-}
-
-function renderInventory() {
-    const grid = document.getElementById('inventory-grid');
     grid.innerHTML = '';
 
     let items = [];
@@ -403,23 +172,19 @@ function renderInventory() {
     items.forEach(item => {
         const isEquipped = equippedItem && equippedItem.id === item.id;
 
-        const itemEl = document.createElement('div');
-        itemEl.className = `inventory-item ${isEquipped ? 'equipped' : ''}`;
-        itemEl.dataset.itemId = item.id;
-
-        itemEl.innerHTML = `
-      <span class="item-icon">${item.icon}</span>
-      <span class="item-name">${item.name}</span>
-      ${item.quantity > 1 ? `<span class="item-qty">x${item.quantity}</span>` : ''}
+        const el = document.createElement('div');
+        el.className = `inv-item ${isEquipped ? 'equipped' : ''}`;
+        el.innerHTML = `
+      <span class="inv-item-icon">${item.icon}</span>
+      <span class="inv-item-name">${item.name}</span>
     `;
+        el.addEventListener('click', () => equipItemFull(item.id, GameData.currentTab));
 
-        itemEl.addEventListener('click', () => equipItem(item.id, GameData.currentTab));
-
-        grid.appendChild(itemEl);
+        grid.appendChild(el);
     });
 }
 
-function equipItem(itemId, category) {
+function equipItemFull(itemId, category) {
     let items, slotKey;
 
     switch (category) {
@@ -440,11 +205,9 @@ function equipItem(itemId, category) {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    // Se já está equipado, desequipar
     if (GameData.equipped[slotKey] && GameData.equipped[slotKey].id === itemId) {
-        // Para armas, sempre manter o punho
         if (slotKey === 'weapon') {
-            GameData.equipped[slotKey] = GameData.inventory.weapons[0]; // Punho
+            GameData.equipped[slotKey] = GameData.inventory.weapons[0];
         } else {
             GameData.equipped[slotKey] = null;
         }
@@ -452,181 +215,429 @@ function equipItem(itemId, category) {
         GameData.equipped[slotKey] = item;
     }
 
-    updateEquipmentSlots();
-    renderInventory();
-    closeInventory();
-
+    renderInventoryFull();
     console.log(`✅ Equipado: ${item.name}`);
 }
 
-function updateEquipmentSlots() {
-    // Atualizar slot de arma
-    const weaponSlot = document.getElementById('slot-weapon');
-    const weapon = GameData.equipped.weapon;
-    weaponSlot.querySelector('.slot-icon').textContent = weapon ? weapon.icon : '🤛';
+// ============================================
+// BESTIARY SCREEN
+// ============================================
 
-    // Atualizar slot de acessório
-    const accessorySlot = document.getElementById('slot-accessory');
-    const accessory = GameData.equipped.accessory;
-    accessorySlot.querySelector('.slot-icon').textContent = accessory ? accessory.icon : '➖';
+function renderBestiary() {
+    const list = document.getElementById('bestiary-list');
+    if (!list) return;
 
-    // Atualizar slot de cura
-    const healingSlot = document.getElementById('slot-healing');
-    const healing = GameData.equipped.healing;
-    healingSlot.querySelector('.slot-icon').textContent = healing ? healing.icon : '➖';
+    list.innerHTML = '';
 
-    // Atualizar debug
-    const debugWeapon = document.getElementById('debug-weapon');
-    if (debugWeapon) {
-        debugWeapon.textContent = weapon ? weapon.name : 'Nenhuma';
-    }
-
-    // Aplicar filtro de acessório se necessário
-    applyAccessoryFilter();
+    GameData.bestiary.forEach(monster => {
+        const card = document.createElement('div');
+        card.className = 'monster-card';
+        card.innerHTML = `
+      <div class="monster-icon">${monster.icon}</div>
+      <div class="monster-info">
+        <div class="monster-name">${monster.name}</div>
+        <div class="monster-type">${monster.type} • Fraqueza: ${monster.weakness}</div>
+      </div>
+      <div class="monster-status ${monster.defeated ? 'defeated' : 'locked'}">
+        ${monster.defeated ? '✓' : '🔒'}
+      </div>
+    `;
+        list.appendChild(card);
+    });
 }
 
-function applyAccessoryFilter() {
-    const accessory = GameData.equipped.accessory;
-    const sceneEl = document.getElementById('ar-scene');
+// ============================================
+// PROFILE SCREEN
+// ============================================
 
-    // Remover filtros existentes
-    sceneEl.style.filter = 'none';
+function updateProfileStats() {
+    document.getElementById('profile-monsters').textContent = GameData.player.monstersDefeated;
+    document.getElementById('profile-hunts').textContent = GameData.player.huntsCompleted;
+    document.getElementById('profile-items').textContent = GameData.player.itemsCollected;
+    document.getElementById('profile-name').value = GameData.player.name;
+}
 
-    if (accessory && accessory.filter) {
-        switch (accessory.filter) {
-            case 'grayscale':
-                sceneEl.style.filter = 'grayscale(1) contrast(1.2)';
-                break;
-            case 'uv':
-                sceneEl.style.filter = 'hue-rotate(240deg) saturate(2)';
-                break;
+// ============================================
+// AR MODE
+// ============================================
+
+let arSession = null;
+
+async function startARMode() {
+    const scene = document.getElementById('ar-scene');
+    if (!scene) return;
+
+    // Verificar suporte WebXR
+    if (!navigator.xr) {
+        alert('WebXR não disponível neste navegador');
+        goto('home');
+        return;
+    }
+
+    try {
+        const supported = await navigator.xr.isSessionSupported('immersive-ar');
+        if (!supported) {
+            alert('AR não suportado neste dispositivo');
+            goto('home');
+            return;
         }
+
+        // Entrar em AR
+        if (scene.enterAR) {
+            await scene.enterAR();
+        }
+
+        updateARHUD();
+        initARGeolocation();
+
+    } catch (e) {
+        console.error('Erro ao iniciar AR:', e);
+        alert('Erro ao iniciar AR: ' + e.message);
+        goto('home');
     }
 }
 
-function useHealingItem() {
-    const healing = GameData.equipped.healing;
-    if (!healing) {
-        console.log('❌ Nenhum item de cura equipado');
-        return;
+function exitAR() {
+    const scene = document.getElementById('ar-scene');
+    if (scene && scene.xrSession) {
+        scene.xrSession.end();
+    }
+    goto('home');
+}
+
+function updateARHUD() {
+    // Atualizar HP do jogador
+    const hpFill = document.getElementById('ar-player-hp-fill');
+    if (hpFill) {
+        hpFill.style.width = `${(GameData.player.hp / GameData.player.maxHp) * 100}%`;
     }
 
-    if (GameData.player.hp >= GameData.player.maxHp) {
-        console.log('❤️ HP já está cheio!');
-        return;
+    // Atualizar slots
+    const weaponSlot = document.getElementById('ar-slot-weapon');
+    const accessorySlot = document.getElementById('ar-slot-accessory');
+    const healingSlot = document.getElementById('ar-slot-healing');
+
+    if (weaponSlot) {
+        weaponSlot.querySelector('span').textContent = GameData.equipped.weapon?.icon || '🤛';
     }
+    if (accessorySlot) {
+        accessorySlot.querySelector('span').textContent = GameData.equipped.accessory?.icon || '➖';
+    }
+    if (healingSlot) {
+        healingSlot.querySelector('span').textContent = GameData.equipped.healing?.icon || '➖';
+    }
+}
 
-    // Aplicar cura
-    GameData.player.hp = Math.min(GameData.player.maxHp, GameData.player.hp + healing.healAmount);
+// ============================================
+// A-FRAME COMPONENTS
+// ============================================
 
-    // Reduzir quantidade
-    healing.quantity--;
+AFRAME.registerComponent('ar-monster', {
+    schema: {
+        type: { type: 'string', default: 'werewolf' },
+        hp: { type: 'number', default: 100 },
+        maxHp: { type: 'number', default: 100 }
+    },
 
-    // Se acabou, remover dos equipados
-    if (healing.quantity <= 0) {
-        const idx = GameData.inventory.healing.findIndex(h => h.id === healing.id);
+    init: function () {
+        const modelMap = {
+            werewolf: '#werewolf-model',
+            vampire: '#vampire-model',
+            ghost: '#ghost-model',
+            demon: '#demon-model'
+        };
+
+        this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
+        this.el.setAttribute('scale', '0.5 0.5 0.5');
+        this.el.setAttribute('animation', {
+            property: 'rotation',
+            to: '0 360 0',
+            loop: true,
+            dur: 8000,
+            easing: 'linear'
+        });
+
+        const combatSystem = this.el.sceneEl.systems['combat'];
+        if (combatSystem) {
+            combatSystem.registerMonster(this.el);
+        }
+    },
+
+    takeDamage: function (amount, weaponId) {
+        const weapon = GameData.inventory.weapons.find(w => w.id === weaponId);
+        let actualDamage = amount;
+        let isWeakness = false;
+
+        if (weapon && weapon.weakness.includes(this.data.type)) {
+            actualDamage = amount * 2;
+            isWeakness = true;
+        } else if (weapon && weapon.weakness.length > 0 && !weapon.weakness.includes(this.data.type)) {
+            actualDamage = Math.floor(amount * 0.3);
+        }
+
+        this.data.hp -= actualDamage;
+
+        updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
+
+        if (this.data.hp <= 0) {
+            this.die();
+        }
+
+        return { damage: actualDamage, isWeakness, remainingHp: this.data.hp };
+    },
+
+    die: function () {
+        this.el.setAttribute('animation__death', {
+            property: 'scale',
+            to: '0 0 0',
+            dur: 500,
+            easing: 'easeInQuad'
+        });
+
+        const combatSystem = this.el.sceneEl.systems['combat'];
+        if (combatSystem) {
+            combatSystem.unregisterMonster(this.el);
+        }
+
+        // Atualizar estatísticas
+        GameData.player.monstersDefeated++;
+
+        // Marcar como derrotado no bestiário
+        const monster = GameData.bestiary.find(m => m.id === this.data.type);
+        if (monster) monster.defeated = true;
+
+        // Adicionar ao diário
+        addDiaryEntry(`Derrotou um ${this.data.type}`);
+
+        setTimeout(() => {
+            this.el.parentNode.removeChild(this.el);
+            hideMonsterHP();
+        }, 600);
+    }
+});
+
+AFRAME.registerSystem('combat', {
+    init: function () {
+        this.raycaster = new THREE.Raycaster();
+        this.monsters = [];
+    },
+
+    registerMonster: function (el) {
+        if (!this.monsters.includes(el)) {
+            this.monsters.push(el);
+        }
+    },
+
+    unregisterMonster: function (el) {
+        const idx = this.monsters.indexOf(el);
         if (idx !== -1) {
-            GameData.inventory.healing.splice(idx, 1);
+            this.monsters.splice(idx, 1);
         }
-        GameData.equipped.healing = null;
+    },
+
+    fire: function () {
+        const camera = this.el.sceneEl.camera;
+        const weapon = GameData.equipped.weapon;
+
+        if (!camera || !weapon) {
+            return { hit: false, reason: 'no_weapon' };
+        }
+
+        const cameraPosition = new THREE.Vector3();
+        const cameraDirection = new THREE.Vector3();
+
+        camera.getWorldPosition(cameraPosition);
+        camera.getWorldDirection(cameraDirection);
+
+        this.raycaster.set(cameraPosition, cameraDirection);
+
+        const meshes = [];
+        this.monsters.forEach(monster => {
+            const mesh = monster.getObject3D('mesh');
+            if (mesh) meshes.push(mesh);
+        });
+
+        if (meshes.length === 0) {
+            return { hit: false, reason: 'no_monsters' };
+        }
+
+        const intersects = this.raycaster.intersectObjects(meshes, true);
+
+        if (intersects.length > 0) {
+            const hitObject = intersects[0];
+            const monsterEl = this.findMonsterFromMesh(hitObject.object);
+
+            if (monsterEl) {
+                const monsterComponent = monsterEl.components['ar-monster'];
+                const result = monsterComponent.takeDamage(weapon.damage, weapon.id);
+
+                if (navigator.vibrate) {
+                    navigator.vibrate(result.isWeakness ? [100, 50, 100] : [50, 30, 50]);
+                }
+
+                return {
+                    hit: true,
+                    monster: monsterComponent.data.type,
+                    damage: result.damage,
+                    isWeakness: result.isWeakness,
+                    remainingHp: result.remainingHp
+                };
+            }
+        }
+
+        return { hit: false, reason: 'missed' };
+    },
+
+    findMonsterFromMesh: function (mesh) {
+        let current = mesh;
+        while (current) {
+            if (current.el && current.el.hasAttribute('ar-monster')) {
+                return current.el;
+            }
+            current = current.parent;
+        }
+        return null;
     }
+});
 
-    updatePlayerHP();
-    updateEquipmentSlots();
+AFRAME.registerSystem('monster-spawner', {
+    init: function () {
+        this.reticle = null;
+        this.lastHitPose = null;
 
-    console.log(`💊 Curado! +${healing.healAmount} HP. HP atual: ${GameData.player.hp}`);
+        this.el.sceneEl.addEventListener('loaded', () => {
+            this.reticle = document.getElementById('reticle');
+        });
 
-    // Feedback visual
-    if (navigator.vibrate) {
-        navigator.vibrate([30, 20, 30]);
+        this.el.sceneEl.addEventListener('ar-hit-test-achieved', () => {
+            if (this.reticle) {
+                this.reticle.setAttribute('visible', true);
+                this.lastHitPose = {
+                    position: this.reticle.getAttribute('position')
+                };
+            }
+        });
+    },
+
+    spawnMonster: function (type = null) {
+        let position;
+
+        if (this.lastHitPose && this.reticle && this.reticle.getAttribute('visible')) {
+            const reticlePos = this.reticle.getAttribute('position');
+            position = { x: reticlePos.x, y: reticlePos.y, z: reticlePos.z };
+        } else {
+            const camera = document.getElementById('camera');
+            const cameraPos = camera.getAttribute('position');
+            const cameraRot = camera.getAttribute('rotation');
+            const angle = THREE.MathUtils.degToRad(cameraRot.y);
+            position = {
+                x: cameraPos.x - Math.sin(angle) * 2,
+                y: 0,
+                z: cameraPos.z - Math.cos(angle) * 2
+            };
+        }
+
+        const types = ['werewolf', 'vampire', 'ghost', 'demon'];
+        const monsterType = type || types[Math.floor(Math.random() * types.length)];
+
+        const hpMap = { werewolf: 100, vampire: 80, ghost: 60, demon: 120 };
+
+        const monster = document.createElement('a-entity');
+        monster.setAttribute('ar-monster', {
+            type: monsterType,
+            hp: hpMap[monsterType],
+            maxHp: hpMap[monsterType]
+        });
+        monster.setAttribute('position', position);
+
+        document.getElementById('monsters-container').appendChild(monster);
+        showMonsterHP(monsterType, hpMap[monsterType], hpMap[monsterType]);
+
+        return monster;
     }
-}
-
-function updatePlayerHP() {
-    const fill = document.getElementById('player-hp-fill');
-    const percent = (GameData.player.hp / GameData.player.maxHp) * 100;
-    fill.style.width = `${percent}%`;
-
-    // Mudar cor conforme HP
-    if (percent < 25) {
-        fill.style.background = 'linear-gradient(90deg, #ff0000, #660000)';
-    } else if (percent < 50) {
-        fill.style.background = 'linear-gradient(90deg, #ff6600, #cc3300)';
-    } else {
-        fill.style.background = 'linear-gradient(90deg, #00cc00, #44ff44)';
-    }
-}
+});
 
 // ============================================
-// FUNÇÕES DE UI/HUD
+// UI HELPERS
 // ============================================
-
-function updateMonsterCount() {
-    const count = document.querySelectorAll('[ar-monster]').length;
-    document.getElementById('debug-monsters').textContent = count;
-}
 
 function showMonsterHP(name, hp, maxHp) {
-    const hpContainer = document.getElementById('monster-hp');
-    const nameEl = document.getElementById('monster-name');
-    const fillEl = document.getElementById('monster-hp-fill');
+    const container = document.getElementById('ar-monster-hp');
+    const nameEl = document.getElementById('ar-monster-name');
+    const fillEl = document.getElementById('ar-monster-hp-fill');
 
-    const nameMap = {
-        werewolf: '🐺 Lobisomem',
-        vampire: '🧛 Vampiro',
-        ghost: '👻 Fantasma',
-        demon: '😈 Demônio'
-    };
+    const names = { werewolf: '🐺 Lobisomem', vampire: '🧛 Vampiro', ghost: '👻 Fantasma', demon: '😈 Demônio' };
 
-    nameEl.textContent = nameMap[name] || name;
+    nameEl.textContent = names[name] || name;
     fillEl.style.width = `${(hp / maxHp) * 100}%`;
-    hpContainer.classList.add('visible');
+    container.classList.add('visible');
 }
 
-function updateMonsterHP(hp, maxHp, name) {
-    const fillEl = document.getElementById('monster-hp-fill');
-    const percent = Math.max(0, (hp / maxHp) * 100);
-    fillEl.style.width = `${percent}%`;
-
-    if (percent < 25) {
-        fillEl.style.background = 'linear-gradient(90deg, #ff0000, #660000)';
-    } else if (percent < 50) {
-        fillEl.style.background = 'linear-gradient(90deg, #ff6600, #cc3300)';
-    }
+function updateMonsterHP(hp, maxHp) {
+    const fillEl = document.getElementById('ar-monster-hp-fill');
+    fillEl.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
 }
 
 function hideMonsterHP() {
-    document.getElementById('monster-hp').classList.remove('visible');
+    document.getElementById('ar-monster-hp')?.classList.remove('visible');
 }
 
 function showHitFeedback(hit, damage = 0, isWeakness = false) {
-    const feedback = document.getElementById('hit-feedback');
+    const feedback = document.getElementById('ar-hit-feedback');
+    if (!feedback) return;
 
     if (hit) {
         feedback.textContent = isWeakness ? `⚡-${damage}` : `-${damage}`;
-        feedback.className = 'hit';
-        if (isWeakness) {
-            feedback.style.color = '#ffff00';
-        }
+        feedback.className = 'ar-hit-feedback hit';
     } else {
         feedback.textContent = 'MISS';
-        feedback.className = 'miss';
+        feedback.className = 'ar-hit-feedback miss';
     }
 
     setTimeout(() => {
-        feedback.className = '';
-        feedback.style.color = '';
+        feedback.className = 'ar-hit-feedback';
     }, 300);
 }
 
-function updateDebugShot(result) {
-    const el = document.getElementById('debug-shot');
-    if (result.hit) {
-        el.textContent = result.isWeakness ? `CRIT! -${result.damage}` : `HIT! -${result.damage}`;
-        el.style.color = result.isWeakness ? '#ffff00' : '#ff4444';
-    } else {
-        el.textContent = result.reason === 'no_monsters' ? 'Sem alvo' : 'Errou';
-        el.style.color = '#888';
+function addDiaryEntry(text) {
+    const entry = {
+        date: new Date().toLocaleString('pt-BR'),
+        text: text,
+        location: GeoState?.currentPosition ? 'GPS Ativo' : 'Desconhecido'
+    };
+    GameData.diary.unshift(entry);
+}
+
+// ============================================
+// GEOLOCATION
+// ============================================
+
+const GeoState = {
+    currentPosition: null,
+    monsterSpawns: [],
+    isWatching: false
+};
+
+function initARGeolocation() {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            GeoState.currentPosition = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
+            };
+            updateARLocation();
+        },
+        (err) => console.error('GPS error:', err),
+        { enableHighAccuracy: true }
+    );
+}
+
+function updateARLocation() {
+    const el = document.getElementById('ar-location');
+    if (el && GeoState.currentPosition) {
+        el.querySelector('.street').textContent = `📍 ${GeoState.currentPosition.latitude.toFixed(4)}, ${GeoState.currentPosition.longitude.toFixed(4)}`;
     }
 }
 
@@ -634,476 +645,57 @@ function updateDebugShot(result) {
 // EVENT LISTENERS
 // ============================================
 
-let arSession = null;
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎮 Supernatural AR - Sistema de Inventário');
+    console.log('🎮 Supernatural AR Initialized');
 
-    const scene = document.getElementById('ar-scene');
-    const startScreen = document.getElementById('start-screen');
-    const enterArButton = document.getElementById('enter-ar-button');
-    const exitArButton = document.getElementById('exit-ar-button');
-    const arStatus = document.getElementById('ar-status');
-    const hud = document.getElementById('hud');
+    // Iniciar splash
+    initSplash();
 
-    async function checkARSupport() {
-        if (!navigator.xr) {
-            arStatus.textContent = '❌ WebXR não disponível';
-            enterArButton.disabled = true;
-            return false;
-        }
+    // Navegação Home
+    document.getElementById('btn-start-hunt')?.addEventListener('click', () => goto('hunt'));
+    document.getElementById('btn-map')?.addEventListener('click', () => goto('map'));
+    document.getElementById('btn-inventory')?.addEventListener('click', () => goto('inventory'));
+    document.getElementById('btn-bestiary')?.addEventListener('click', () => goto('bestiary'));
+    document.getElementById('btn-diary')?.addEventListener('click', () => goto('diary'));
+    document.getElementById('btn-profile')?.addEventListener('click', () => goto('profile'));
 
-        try {
-            const supported = await navigator.xr.isSessionSupported('immersive-ar');
-            if (supported) {
-                arStatus.textContent = '✅ AR disponível! Toque para iniciar';
-                enterArButton.disabled = false;
-                return true;
-            } else {
-                arStatus.textContent = '❌ AR não suportado neste dispositivo';
-                enterArButton.disabled = true;
-                return false;
-            }
-        } catch (e) {
-            arStatus.textContent = '❌ Erro ao verificar AR: ' + e.message;
-            enterArButton.disabled = true;
-            return false;
-        }
-    }
+    // Back buttons
+    document.getElementById('btn-back-map')?.addEventListener('click', goBack);
+    document.getElementById('btn-back-inventory')?.addEventListener('click', goBack);
+    document.getElementById('btn-back-bestiary')?.addEventListener('click', goBack);
+    document.getElementById('btn-back-diary')?.addEventListener('click', goBack);
+    document.getElementById('btn-back-profile')?.addEventListener('click', goBack);
 
-    async function enterAR() {
-        console.log('🚀 Entrando no modo AR...');
-        arStatus.textContent = '⏳ Iniciando câmera AR...';
-
-        try {
-            if (scene.enterAR) {
-                await scene.enterAR();
-            } else {
-                const sessionInit = {
-                    requiredFeatures: ['hit-test', 'local-floor'],
-                    optionalFeatures: ['dom-overlay', 'anchors'],
-                    domOverlay: { root: hud }
-                };
-
-                arSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
-                scene.xrSession = arSession;
-
-                arSession.addEventListener('end', () => {
-                    console.log('📴 Sessão AR encerrada');
-                    exitAR();
-                });
-            }
-
-            startScreen.classList.add('hidden');
-            hud.classList.add('visible');
-
-            console.log('✅ Modo AR ativado!');
-
-        } catch (e) {
-            console.error('❌ Erro ao entrar em AR:', e);
-            arStatus.textContent = '❌ Erro: ' + e.message;
-        }
-    }
-
-    function exitAR() {
-        console.log('📴 Saindo do modo AR...');
-
-        if (arSession) {
-            arSession.end();
-            arSession = null;
-        }
-
-        if (scene.xrSession) {
-            scene.xrSession.end();
-        }
-
-        startScreen.classList.remove('hidden');
-        hud.classList.remove('visible');
-    }
-
-    scene.addEventListener('loaded', () => {
-        console.log('✓ Cena A-Frame carregada');
-        checkARSupport();
-        updateEquipmentSlots();
-        updatePlayerHP();
-
-        // Botões principais
-        enterArButton.addEventListener('click', enterAR);
-        exitArButton.addEventListener('click', exitAR);
-
-        // Botão de Spawn
-        document.getElementById('spawn-button').addEventListener('click', () => {
-            const spawner = scene.systems['monster-spawner'];
-            if (spawner) {
-                spawner.spawnMonster();
-            }
-        });
-
-        // Botão de Atirar
-        document.getElementById('fire-button').addEventListener('click', () => {
-            const combat = scene.systems['combat'];
-            if (combat) {
-                const result = combat.fire();
-                showHitFeedback(result.hit, result.damage, result.isWeakness);
-                updateDebugShot(result);
-                console.log('💥 Resultado do tiro:', result);
-            }
-        });
-
-        // Slots de equipamento - abrir inventário ao clicar
-        document.querySelectorAll('.equipment-slot').forEach(slot => {
-            slot.addEventListener('click', () => {
-                const slotType = slot.dataset.type;
-                openInventory(slotType);
-            });
-        });
-
-        // Slot de cura - usar item com long press ou duplo clique
-        const healingSlot = document.getElementById('slot-healing');
-        let healingPressTimer;
-
-        healingSlot.addEventListener('touchstart', () => {
-            healingPressTimer = setTimeout(() => {
-                useHealingItem();
-            }, 500);
-        });
-
-        healingSlot.addEventListener('touchend', () => {
-            clearTimeout(healingPressTimer);
-        });
-
-        // Fechar inventário
-        document.getElementById('close-inventory').addEventListener('click', closeInventory);
-
-        // Tabs do inventário
-        document.querySelectorAll('.inventory-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                switchTab(tab.dataset.tab);
-            });
+    // Inventory tabs
+    document.querySelectorAll('.inv-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.inv-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            GameData.currentTab = tab.dataset.tab;
+            renderInventoryFull();
         });
     });
 
-    scene.addEventListener('enter-vr', () => {
-        if (scene.is('ar-mode')) {
-            console.log('🎯 Modo AR ativado via A-Frame');
-            startScreen.classList.add('hidden');
-            hud.classList.add('visible');
+    // Profile name
+    document.getElementById('profile-name')?.addEventListener('change', (e) => {
+        GameData.player.name = e.target.value;
+    });
+
+    // AR buttons
+    document.getElementById('ar-exit')?.addEventListener('click', exitAR);
+
+    document.getElementById('ar-fire')?.addEventListener('click', () => {
+        const scene = document.getElementById('ar-scene');
+        const combat = scene?.systems['combat'];
+        if (combat) {
+            const result = combat.fire();
+            showHitFeedback(result.hit, result.damage, result.isWeakness);
         }
     });
 
-    scene.addEventListener('exit-vr', () => {
-        console.log('📴 Saiu do modo AR/VR');
-        startScreen.classList.remove('hidden');
-        hud.classList.remove('visible');
+    document.getElementById('ar-spawn')?.addEventListener('click', () => {
+        const scene = document.getElementById('ar-scene');
+        const spawner = scene?.systems['monster-spawner'];
+        if (spawner) spawner.spawnMonster();
     });
-});
-
-// ============================================
-// SISTEMA DE GEOLOCALIZAÇÃO
-// ============================================
-
-const GeoState = {
-    currentPosition: null,
-    monsterSpawns: [],
-    isWatching: false,
-    radarScale: 100 // metros por 50px (raio do radar)
-};
-
-/**
- * Iniciar monitoramento de GPS
- */
-async function initGeolocation() {
-    if (!('geolocation' in navigator)) {
-        updateGPSStatus('❌ GPS não disponível');
-        return false;
-    }
-
-    try {
-        // Obter posição inicial
-        const position = await getCurrentPositionAsync();
-        GeoState.currentPosition = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-        };
-
-        updateGPSStatus('✓ GPS ativo');
-        updateLocationDisplay(GeoState.currentPosition);
-
-        // Gerar spawns de monstros iniciais
-        generateMonsterSpawns(3);
-
-        // Iniciar monitoramento contínuo
-        startWatchingPosition();
-
-        return true;
-    } catch (error) {
-        console.error('❌ Erro de GPS:', error);
-        updateGPSStatus('❌ ' + getGPSErrorMessage(error));
-        return false;
-    }
-}
-
-function getCurrentPositionAsync() {
-    return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 5000
-        });
-    });
-}
-
-function startWatchingPosition() {
-    if (GeoState.isWatching) return;
-
-    GeoState.watchId = navigator.geolocation.watchPosition(
-        (position) => {
-            GeoState.currentPosition = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                heading: position.coords.heading
-            };
-
-            updateLocationDisplay(GeoState.currentPosition);
-            updateRadar();
-            checkNearbyMonsters();
-        },
-        (error) => {
-            console.error('❌ Erro no watch GPS:', error);
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 2000
-        }
-    );
-
-    GeoState.isWatching = true;
-    console.log('🛰️ Monitoramento GPS iniciado');
-}
-
-function stopWatchingPosition() {
-    if (GeoState.watchId) {
-        navigator.geolocation.clearWatch(GeoState.watchId);
-        GeoState.watchId = null;
-        GeoState.isWatching = false;
-    }
-}
-
-/**
- * Calcular distância entre dois pontos (Haversine)
- */
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Raio da Terra em metros
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-}
-
-function toRad(deg) {
-    return deg * (Math.PI / 180);
-}
-
-/**
- * Gerar spawns de monstros ao redor do jogador
- */
-function generateMonsterSpawns(count = 3) {
-    if (!GeoState.currentPosition) return;
-
-    const { latitude, longitude } = GeoState.currentPosition;
-    GeoState.monsterSpawns = [];
-
-    const types = ['werewolf', 'vampire', 'ghost', 'demon'];
-
-    for (let i = 0; i < count; i++) {
-        // Distância aleatória entre 20 e 80 metros
-        const distance = 20 + Math.random() * 60;
-        const angle = Math.random() * 2 * Math.PI;
-
-        const deltaLat = (distance / 111000) * Math.cos(angle);
-        const deltaLon = (distance / (111000 * Math.cos(toRad(latitude)))) * Math.sin(angle);
-
-        GeoState.monsterSpawns.push({
-            id: `spawn_${Date.now()}_${i}`,
-            latitude: latitude + deltaLat,
-            longitude: longitude + deltaLon,
-            distance: Math.round(distance),
-            type: types[Math.floor(Math.random() * types.length)],
-            active: true
-        });
-    }
-
-    console.log(`🐺 ${count} monstros gerados no mapa`);
-    updateRadar();
-}
-
-/**
- * Verificar se há monstros próximos
- */
-function checkNearbyMonsters() {
-    if (!GeoState.currentPosition || GeoState.monsterSpawns.length === 0) return;
-
-    const { latitude, longitude } = GeoState.currentPosition;
-    const alertEl = document.getElementById('monster-alert');
-
-    for (const spawn of GeoState.monsterSpawns) {
-        if (!spawn.active) continue;
-
-        const distance = calculateDistance(latitude, longitude, spawn.latitude, spawn.longitude);
-        spawn.currentDistance = Math.round(distance);
-
-        // Se está a menos de 15 metros, mostrar alerta
-        if (distance < 15) {
-            alertEl.textContent = `🐺 ${getMonsterName(spawn.type)} a ${spawn.currentDistance}m!`;
-            alertEl.classList.add('visible');
-
-            // Vibrar se disponível
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-            }
-
-            // Auto-spawnar no modo AR se estiver ativo
-            const scene = document.getElementById('ar-scene');
-            if (scene && scene.is('ar-mode')) {
-                const spawner = scene.systems['monster-spawner'];
-                if (spawner) {
-                    spawner.spawnMonster(spawn.type);
-                    spawn.active = false; // Marcar como usado
-                    updateRadar();
-                }
-            }
-        } else {
-            alertEl.classList.remove('visible');
-        }
-    }
-}
-
-function getMonsterName(type) {
-    const names = {
-        werewolf: 'Lobisomem',
-        vampire: 'Vampiro',
-        ghost: 'Fantasma',
-        demon: 'Demônio'
-    };
-    return names[type] || type;
-}
-
-/**
- * Atualizar blips no radar
- */
-function updateRadar() {
-    const radar = document.getElementById('radar');
-    if (!radar || !GeoState.currentPosition) return;
-
-    // Remover blips antigos
-    radar.querySelectorAll('.radar-blip').forEach(el => el.remove());
-
-    const { latitude, longitude } = GeoState.currentPosition;
-    const radarRadius = 47; // pixels (metade do radar - borda)
-
-    for (const spawn of GeoState.monsterSpawns) {
-        if (!spawn.active) continue;
-
-        // Calcular posição relativa
-        const deltaLat = spawn.latitude - latitude;
-        const deltaLon = spawn.longitude - longitude;
-
-        // Converter para metros
-        const dx = deltaLon * 111000 * Math.cos(toRad(latitude));
-        const dy = deltaLat * 111000;
-
-        // Escalar para pixels do radar (100m = raio do radar)
-        const scale = radarRadius / GeoState.radarScale;
-        let px = dx * scale;
-        let py = -dy * scale; // Invertido porque Y cresce para baixo
-
-        // Limitar ao círculo do radar
-        const dist = Math.sqrt(px * px + py * py);
-        if (dist > radarRadius) {
-            px = (px / dist) * radarRadius;
-            py = (py / dist) * radarRadius;
-        }
-
-        // Criar blip
-        const blip = document.createElement('div');
-        blip.className = 'radar-blip';
-        blip.style.left = `${50 + px}px`;
-        blip.style.top = `${50 + py}px`;
-        blip.title = `${getMonsterName(spawn.type)} - ${spawn.currentDistance || spawn.distance}m`;
-
-        radar.appendChild(blip);
-    }
-}
-
-/**
- * Atualizar display de localização
- */
-function updateLocationDisplay(position) {
-    const streetEl = document.getElementById('location-street');
-    const coordsEl = document.getElementById('location-coords');
-
-    if (coordsEl) {
-        coordsEl.textContent = `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}`;
-    }
-
-    // Tentar obter nome da rua (async, sem bloquear)
-    getStreetName(position.latitude, position.longitude)
-        .then(name => {
-            if (streetEl && name) {
-                streetEl.textContent = `📍 ${name}`;
-            }
-        })
-        .catch(() => {
-            if (streetEl) {
-                streetEl.textContent = '📍 Localização ativa';
-            }
-        });
-}
-
-/**
- * Obter nome da rua via Nominatim (OpenStreetMap)
- */
-async function getStreetName(lat, lon) {
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`,
-            { headers: { 'Accept-Language': 'pt-BR' } }
-        );
-        const data = await response.json();
-        return data.address?.road || data.address?.suburb || 'Área local';
-    } catch {
-        return null;
-    }
-}
-
-function updateGPSStatus(status) {
-    const el = document.getElementById('debug-gps');
-    if (el) el.textContent = status;
-}
-
-function getGPSErrorMessage(error) {
-    switch (error.code) {
-        case 1: return 'Permissão negada';
-        case 2: return 'Posição indisponível';
-        case 3: return 'Timeout';
-        default: return 'Erro desconhecido';
-    }
-}
-
-// Inicializar GPS quando a página carregar
-document.addEventListener('DOMContentLoaded', () => {
-    // Iniciar GPS após um pequeno delay para não bloquear o carregamento
-    setTimeout(() => {
-        initGeolocation();
-    }, 1000);
 });
