@@ -1,29 +1,93 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Supernatural AR - Protótipo</title>
-  
+
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  
+
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #0a0a0a;
       color: #fff;
       overflow: hidden;
     }
-    
+
+    /* Tela inicial antes de entrar em AR */
+    #start-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #1a0a0a 0%, #0a0a0a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    #start-screen h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    #start-screen p {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 30px;
+      text-align: center;
+      max-width: 280px;
+    }
+
+    #enter-ar-button {
+      padding: 20px 50px;
+      font-size: 20px;
+      font-weight: bold;
+      background: linear-gradient(145deg, #ff4444, #cc0000);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 5px 30px rgba(255, 0, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    #enter-ar-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 40px rgba(255, 0, 0, 0.6);
+    }
+
+    #enter-ar-button:disabled {
+      background: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    #ar-status {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    #start-screen.hidden {
+      display: none;
+    }
+
     /* HUD Overlay */
     #hud {
       position: fixed;
@@ -33,8 +97,13 @@
       height: 100%;
       pointer-events: none;
       z-index: 100;
+      display: none;
     }
-    
+
+    #hud.visible {
+      display: block;
+    }
+
     /* Mira central */
     #crosshair {
       position: absolute;
@@ -46,14 +115,14 @@
       border: 2px solid rgba(255, 255, 255, 0.8);
       border-radius: 50%;
     }
-    
+
     #crosshair::before,
     #crosshair::after {
       content: '';
       position: absolute;
       background: rgba(255, 255, 255, 0.8);
     }
-    
+
     #crosshair::before {
       width: 2px;
       height: 10px;
@@ -61,7 +130,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
     }
-    
+
     #crosshair::after {
       width: 10px;
       height: 2px;
@@ -69,7 +138,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
     }
-    
+
     /* Botão de Ação (Atirar) */
     #fire-button {
       position: absolute;
@@ -90,12 +159,12 @@
       font-size: 24px;
       transition: transform 0.1s, box-shadow 0.1s;
     }
-    
+
     #fire-button:active {
       transform: translateX(-50%) scale(0.95);
       box-shadow: 0 2px 10px rgba(255, 0, 0, 0.3);
     }
-    
+
     /* Botão de Spawn */
     #spawn-button {
       position: absolute;
@@ -114,11 +183,30 @@
       align-items: center;
       justify-content: center;
     }
-    
+
+    /* Botão de Sair do AR */
+    #exit-ar-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #fff;
+      pointer-events: auto;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
     /* Status de Debug */
     #debug-panel {
       position: absolute;
-      top: 20px;
+      top: 80px;
       left: 20px;
       background: rgba(0, 0, 0, 0.7);
       padding: 15px;
@@ -126,16 +214,16 @@
       font-size: 12px;
       max-width: 200px;
     }
-    
+
     #debug-panel h3 {
       margin-bottom: 10px;
       color: #ffcc00;
     }
-    
+
     #debug-panel p {
       margin: 5px 0;
     }
-    
+
     /* Feedback de tiro */
     #hit-feedback {
       position: absolute;
@@ -148,17 +236,17 @@
       transition: opacity 0.3s;
       text-shadow: 0 0 20px currentColor;
     }
-    
+
     #hit-feedback.hit {
       color: #ff4444;
       opacity: 1;
     }
-    
+
     #hit-feedback.miss {
       color: #888;
       opacity: 1;
     }
-    
+
     /* HP do monstro */
     #monster-hp {
       position: absolute;
@@ -169,11 +257,11 @@
       border-radius: 10px;
       display: none;
     }
-    
+
     #monster-hp.visible {
       display: block;
     }
-    
+
     #monster-hp-bar {
       width: 150px;
       height: 15px;
@@ -182,13 +270,13 @@
       overflow: hidden;
       margin-top: 5px;
     }
-    
+
     #monster-hp-fill {
       height: 100%;
       background: linear-gradient(90deg, #ff0000, #ff4444);
       transition: width 0.3s;
     }
-    
+
     /* Instruções */
     #instructions {
       position: absolute;
@@ -202,16 +290,29 @@
       text-align: center;
       max-width: 300px;
     }
+
+    /* Esconder botões padrão do A-Frame */
+    .a-enter-vr-button,
+    .a-enter-ar-button {
+      display: none !important;
+    }
   </style>
 </head>
+
 <body>
+  <!-- Tela Inicial -->
+  <div id="start-screen">
+    <h1>🔥 Supernatural AR 🔥</h1>
+    <p>Caça monstros sobrenaturais em Realidade Aumentada!</p>
+    <button id="enter-ar-button">📷 Entrar em AR</button>
+    <p id="ar-status">Verificando suporte...</p>
+  </div>
+
   <!-- Cena A-Frame AR -->
-  <a-scene
-    id="ar-scene"
-    webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay; overlayElement: #hud;"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
-    ar-hit-test="target: #reticle; type: footprint;"
-  >
+  <a-scene id="ar-scene" vr-mode-ui="enabled: false"
+    webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay, anchors; overlayElement: #hud;"
+    renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;" background="color: transparent"
+    ar-hit-test="target: #reticle; type: footprint;">
     <!-- Assets (modelos 3D) -->
     <a-assets>
       <a-asset-item id="werewolf-model" src="/werewolf.glb"></a-asset-item>
@@ -219,39 +320,37 @@
       <a-asset-item id="ghost-model" src="/ghost.glb"></a-asset-item>
       <a-asset-item id="demon-model" src="/demon.glb"></a-asset-item>
     </a-assets>
-    
+
     <!-- Luzes -->
-    <a-light type="ambient" color="#fff" intensity="0.5"></a-light>
-    <a-light type="directional" color="#fff" intensity="0.8" position="0 5 5"></a-light>
-    
+    <a-light type="ambient" color="#fff" intensity="0.6"></a-light>
+    <a-light type="directional" color="#fff" intensity="0.9" position="1 4 3"></a-light>
+
     <!-- Reticle (indicador de superfície) -->
     <a-entity id="reticle" visible="false">
-      <a-ring 
-        color="#00ff00" 
-        radius-inner="0.04" 
-        radius-outer="0.06"
-        rotation="-90 0 0"
-        material="shader: flat; opacity: 0.8;"
-      ></a-ring>
+      <a-ring color="#00ff00" radius-inner="0.04" radius-outer="0.06" rotation="-90 0 0"
+        material="shader: flat; opacity: 0.8;"></a-ring>
     </a-entity>
-    
+
     <!-- Container de monstros (serão adicionados dinamicamente) -->
     <a-entity id="monsters-container"></a-entity>
-    
+
     <!-- Câmera AR -->
     <a-entity id="camera-rig">
       <a-camera id="camera" position="0 1.6 0"></a-camera>
     </a-entity>
   </a-scene>
-  
+
   <!-- HUD Overlay -->
   <div id="hud">
+    <!-- Botão de Sair -->
+    <button id="exit-ar-button">✕</button>
+
     <!-- Mira -->
     <div id="crosshair"></div>
-    
+
     <!-- Feedback de tiro -->
     <div id="hit-feedback"></div>
-    
+
     <!-- HP do Monstro -->
     <div id="monster-hp">
       <span id="monster-name">Lobisomem</span>
@@ -259,27 +358,28 @@
         <div id="monster-hp-fill" style="width: 100%;"></div>
       </div>
     </div>
-    
+
     <!-- Debug Panel -->
     <div id="debug-panel">
       <h3>🎮 Debug</h3>
-      <p>Modo: <span id="debug-mode">Aguardando AR...</span></p>
+      <p>Modo: <span id="debug-mode">AR Ativo</span></p>
       <p>Monstros: <span id="debug-monsters">0</span></p>
       <p>Último tiro: <span id="debug-shot">-</span></p>
     </div>
-    
+
     <!-- Instruções -->
     <div id="instructions">
-      Aponte para uma superfície plana e toque no botão <strong>+</strong> para spawnar um monstro
+      Aponte para o chão e toque <strong>+</strong> para spawnar um monstro. Mire e atire com <strong>🔫</strong>
     </div>
-    
+
     <!-- Botão de Ação (Atirar) -->
     <button id="fire-button">🔫</button>
-    
+
     <!-- Botão de Spawn -->
     <button id="spawn-button">+</button>
   </div>
-  
+
   <script type="module" src="/src/main.js"></script>
 </body>
+
 </html>

@@ -393,14 +393,110 @@ function updateDebugShot(result) {
 // EVENT LISTENERS
 // ============================================
 
+let arSession = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 Supernatural AR - Protótipo Iniciando...');
 
     const scene = document.getElementById('ar-scene');
+    const startScreen = document.getElementById('start-screen');
+    const enterArButton = document.getElementById('enter-ar-button');
+    const exitArButton = document.getElementById('exit-ar-button');
+    const arStatus = document.getElementById('ar-status');
+    const hud = document.getElementById('hud');
+
+    // Verificar suporte WebXR
+    async function checkARSupport() {
+        if (!navigator.xr) {
+            arStatus.textContent = '❌ WebXR não disponível';
+            enterArButton.disabled = true;
+            return false;
+        }
+
+        try {
+            const supported = await navigator.xr.isSessionSupported('immersive-ar');
+            if (supported) {
+                arStatus.textContent = '✅ AR disponível! Toque para iniciar';
+                enterArButton.disabled = false;
+                return true;
+            } else {
+                arStatus.textContent = '❌ AR não suportado neste dispositivo';
+                enterArButton.disabled = true;
+                return false;
+            }
+        } catch (e) {
+            arStatus.textContent = '❌ Erro ao verificar AR: ' + e.message;
+            enterArButton.disabled = true;
+            return false;
+        }
+    }
+
+    // Entrar no modo AR
+    async function enterAR() {
+        console.log('🚀 Entrando no modo AR...');
+        arStatus.textContent = '⏳ Iniciando câmera AR...';
+
+        try {
+            // Usar a API do A-Frame para entrar em AR
+            if (scene.enterAR) {
+                await scene.enterAR();
+            } else {
+                // Fallback: solicitar sessão WebXR diretamente
+                const sessionInit = {
+                    requiredFeatures: ['hit-test', 'local-floor'],
+                    optionalFeatures: ['dom-overlay', 'anchors'],
+                    domOverlay: { root: hud }
+                };
+
+                arSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+                scene.xrSession = arSession;
+
+                arSession.addEventListener('end', () => {
+                    console.log('📴 Sessão AR encerrada');
+                    exitAR();
+                });
+            }
+
+            // Esconder tela inicial e mostrar HUD
+            startScreen.classList.add('hidden');
+            hud.classList.add('visible');
+
+            console.log('✅ Modo AR ativado!');
+
+        } catch (e) {
+            console.error('❌ Erro ao entrar em AR:', e);
+            arStatus.textContent = '❌ Erro: ' + e.message;
+        }
+    }
+
+    // Sair do modo AR
+    function exitAR() {
+        console.log('📴 Saindo do modo AR...');
+
+        if (arSession) {
+            arSession.end();
+            arSession = null;
+        }
+
+        if (scene.xrSession) {
+            scene.xrSession.end();
+        }
+
+        // Mostrar tela inicial e esconder HUD
+        startScreen.classList.remove('hidden');
+        hud.classList.remove('visible');
+    }
 
     // Aguardar cena carregar
     scene.addEventListener('loaded', () => {
         console.log('✓ Cena A-Frame carregada');
+        checkARSupport();
+
+        // Botão de Entrar em AR
+        enterArButton.addEventListener('click', enterAR);
+
+        // Botão de Sair do AR
+        exitArButton.addEventListener('click', exitAR);
 
         // Botão de Spawn
         document.getElementById('spawn-button').addEventListener('click', () => {
@@ -423,21 +519,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Verificar suporte WebXR
-    if (navigator.xr) {
-        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-            if (supported) {
-                console.log('✓ WebXR AR suportado!');
-                document.getElementById('debug-mode').textContent = 'WebXR OK ✓';
-            } else {
-                console.log('⚠️ WebXR AR não suportado neste dispositivo');
-                document.getElementById('debug-mode').textContent = 'AR não suportado';
-                document.getElementById('instructions').textContent =
-                    'AR não suportado. Teste em Chrome Android com ARCore.';
-            }
-        });
-    } else {
-        console.log('❌ WebXR não disponível');
-        document.getElementById('debug-mode').textContent = 'Sem WebXR';
-    }
+    // Escutar quando AR é ativado via A-Frame
+    scene.addEventListener('enter-vr', () => {
+        if (scene.is('ar-mode')) {
+            console.log('🎯 Modo AR ativado via A-Frame');
+            startScreen.classList.add('hidden');
+            hud.classList.add('visible');
+        }
+    });
+
+    scene.addEventListener('exit-vr', () => {
+        console.log('📴 Saiu do modo AR/VR');
+        startScreen.classList.remove('hidden');
+        hud.classList.remove('visible');
+    });
 });
