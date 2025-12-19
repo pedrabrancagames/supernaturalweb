@@ -1180,6 +1180,7 @@ input {
   flex-direction: column;
   gap: 8px;
   pointer-events: auto;
+  z-index: 10;
 }
 
 .ar-slot {
@@ -1219,6 +1220,7 @@ input {
   font-size: 24px;
   pointer-events: auto;
   box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
+  z-index: 10;
 }
 
 .ar-btn-fire:active {
