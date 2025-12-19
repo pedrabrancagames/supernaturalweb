@@ -361,6 +361,17 @@ AFRAME.registerComponent('ar-monster', {
             easing: 'linear'
         });
 
+        // Fantasmas começam invisíveis - precisam da Filmadora para serem vistos
+        if (this.data.type === 'ghost') {
+            // Verificar se a filmadora está equipada
+            const hasCamera = GameData.equipped.accessory?.id === 'camera';
+            this.el.setAttribute('visible', hasCamera);
+            if (!hasCamera) {
+                this.el.classList.add('ghost-hidden');
+            }
+            console.log(`👻 Fantasma spawnado - Visível: ${hasCamera}`);
+        }
+
         const combatSystem = this.el.sceneEl.systems['combat'];
         if (combatSystem) {
             combatSystem.registerMonster(this.el);
@@ -473,6 +484,10 @@ AFRAME.registerSystem('combat', {
         // Com arma, tenta atacar monstros
         const meshes = [];
         this.monsters.forEach(monster => {
+            // Ignorar fantasmas invisíveis (precisam da filmadora)
+            if (monster.classList.contains('ghost-hidden')) {
+                return;
+            }
             const mesh = monster.getObject3D('mesh');
             if (mesh) meshes.push(mesh);
         });
@@ -885,6 +900,113 @@ function addDiaryEntry(text) {
         location: GeoState?.currentPosition ? 'GPS Ativo' : 'Desconhecido'
     };
     GameData.diary.unshift(entry);
+}
+
+// ============================================
+// ACCESSORY EFFECTS (Filtros de Câmera)
+// ============================================
+
+/**
+ * Aplicar efeito visual do acessório equipado
+ */
+function applyAccessoryEffect(item) {
+    const screenHunt = document.getElementById('screen-hunt');
+    if (!screenHunt) return;
+
+    // Remover filtros anteriores
+    removeAccessoryEffect();
+
+    // Aplicar filtro baseado no acessório
+    switch (item.id) {
+        case 'camera':
+            screenHunt.classList.add('filter-camera');
+            showFilterIndicator('📹 Filmadora Ativa', 'camera');
+            // Revelar fantasmas
+            updateGhostVisibility(true);
+            console.log('📹 Filtro de câmera aplicado - Fantasmas visíveis');
+            break;
+        case 'uv_light':
+            screenHunt.classList.add('filter-uv');
+            showFilterIndicator('🔦 Lanterna UV Ativa', 'uv');
+            // TODO: Revelar mensagens ocultas
+            console.log('🔦 Filtro UV aplicado');
+            break;
+        case 'emf':
+            showFilterIndicator('📡 EMF Ativo', 'emf');
+            // TODO: Detectar monstros próximos
+            console.log('📡 Detector EMF ativo');
+            break;
+    }
+}
+
+/**
+ * Remover todos os efeitos visuais de acessórios
+ */
+function removeAccessoryEffect() {
+    const screenHunt = document.getElementById('screen-hunt');
+    if (!screenHunt) return;
+
+    // Remover todas as classes de filtro
+    screenHunt.classList.remove('filter-camera', 'filter-uv');
+
+    // Remover indicador
+    hideFilterIndicator();
+
+    // Esconder fantasmas novamente
+    updateGhostVisibility(false);
+
+    console.log('🚫 Efeitos de acessório removidos');
+}
+
+/**
+ * Atualizar visibilidade de todos os fantasmas na cena
+ */
+function updateGhostVisibility(visible) {
+    const monsters = document.querySelectorAll('[ar-monster]');
+
+    monsters.forEach(monster => {
+        const component = monster.components['ar-monster'];
+        if (component && component.data.type === 'ghost') {
+            monster.setAttribute('visible', visible);
+
+            // Também atualizar a detecção no raycaster
+            if (visible) {
+                monster.classList.remove('ghost-hidden');
+            } else {
+                monster.classList.add('ghost-hidden');
+            }
+        }
+    });
+
+    console.log(`👻 Fantasmas ${visible ? 'VISÍVEIS' : 'INVISÍVEIS'}`);
+}
+
+/**
+ * Mostrar indicador de filtro ativo na tela
+ */
+function showFilterIndicator(text, type) {
+    let indicator = document.getElementById('filter-indicator');
+
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'filter-indicator';
+        indicator.className = 'filter-indicator';
+        document.getElementById('ar-hud')?.appendChild(indicator);
+    }
+
+    indicator.textContent = text;
+    indicator.className = `filter-indicator ${type}`;
+    indicator.style.display = 'flex';
+}
+
+/**
+ * Esconder indicador de filtro
+ */
+function hideFilterIndicator() {
+    const indicator = document.getElementById('filter-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
 }
 
 // ============================================
