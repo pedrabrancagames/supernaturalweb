@@ -21,12 +21,12 @@ const GameData = {
 
     inventory: {
         weapons: [
-            { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [] },
-            { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'] },
-            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'] },
-            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'] },
-            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'] },
-            { id: 'salt', name: 'Sal', icon: '🧂', quantity: 0, damage: 25, weakness: ['ghost', 'demon'] }
+            { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [], image: null },
+            { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
+            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'], image: null },
+            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'], image: null },
+            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'], image: null },
+            { id: 'salt', name: 'Sal', icon: '🧂', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
         ],
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
@@ -329,6 +329,32 @@ function updateARHUD() {
     }
     if (healingSlot) {
         healingSlot.querySelector('span').textContent = GameData.equipped.healing?.icon || '➖';
+    }
+
+    // Atualizar imagem da arma equipada (estilo FPS)
+    updateWeaponImage();
+}
+
+// Atualizar imagem da arma no HUD
+function updateWeaponImage() {
+    const weaponImageContainer = document.getElementById('ar-weapon-image');
+    const weaponImg = document.getElementById('ar-weapon-img');
+
+    if (!weaponImageContainer || !weaponImg) return;
+
+    const equippedWeapon = GameData.equipped.weapon;
+
+    if (equippedWeapon && equippedWeapon.image) {
+        // Mostrar imagem da arma
+        weaponImg.src = equippedWeapon.image;
+        weaponImg.alt = equippedWeapon.name;
+        weaponImageContainer.style.display = 'flex';
+        console.log(`🔫 Exibindo arma: ${equippedWeapon.name}`);
+    } else {
+        // Esconder imagem da arma
+        weaponImageContainer.style.display = 'none';
+        weaponImg.src = '';
+        weaponImg.alt = '';
     }
 }
 

@@ -865,6 +865,29 @@ input {
   z-index: 10;
 }
 
+/* Imagem da arma equipada (estilo FPS) */
+.ar-weapon-image {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ar-weapon-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
+
 .ar-btn-exit {
   position: absolute;
   top: 20px;
