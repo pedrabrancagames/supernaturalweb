@@ -353,13 +353,7 @@ AFRAME.registerComponent('ar-monster', {
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
         this.el.setAttribute('scale', '0.5 0.5 0.5');
-        this.el.setAttribute('animation', {
-            property: 'rotation',
-            to: '0 360 0',
-            loop: true,
-            dur: 8000,
-            easing: 'linear'
-        });
+        // Monstros não ficam mais rodando - removida animação de rotação
 
         // Fantasmas começam invisíveis - precisam da Filmadora para serem vistos
         if (this.data.type === 'ghost') {
@@ -634,6 +628,13 @@ AFRAME.registerSystem('monster-spawner', {
         setTimeout(() => {
             this.spawnMonster();
             this.spawnLoot();
+            // Atualizar marcadores do minimapa após spawn inicial
+            if (typeof updateMinimapMarkers === 'function') updateMinimapMarkers();
+        }, 2000);
+
+        // Atualizar minimapa periodicamente (a cada 2 segundos)
+        this.minimapInterval = setInterval(() => {
+            if (typeof updateMinimapMarkers === 'function') updateMinimapMarkers();
         }, 2000);
 
         // Spawn de monstros a cada 30 segundos
@@ -663,6 +664,10 @@ AFRAME.registerSystem('monster-spawner', {
         if (this.lootSpawnInterval) {
             clearInterval(this.lootSpawnInterval);
             this.lootSpawnInterval = null;
+        }
+        if (this.minimapInterval) {
+            clearInterval(this.minimapInterval);
+            this.minimapInterval = null;
         }
     },
 
@@ -1022,7 +1027,9 @@ const GeoState = {
     isWatching: false,
     map: null,
     playerMarker: null,
-    watchId: null
+    watchId: null,
+    monsterMarkers: [],
+    lootMarkers: []
 };
 
 function initARGeolocation() {
@@ -1115,6 +1122,72 @@ function updateMiniMap() {
     if (GeoState.playerMarker) {
         GeoState.playerMarker.setLatLng([latitude, longitude]);
     }
+
+    // Atualizar marcadores de monstros e loot no mini-mapa
+    updateMinimapMarkers();
+}
+
+// Atualizar marcadores de monstros e loot no mini-mapa
+function updateMinimapMarkers() {
+    if (!GeoState.map || !GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Remover marcadores antigos
+    GeoState.monsterMarkers.forEach(marker => marker.remove());
+    GeoState.lootMarkers.forEach(marker => marker.remove());
+    GeoState.monsterMarkers = [];
+    GeoState.lootMarkers = [];
+
+    // Obter monstros e loot ativos na cena
+    const monsters = document.querySelectorAll('[ar-monster]');
+    const loot = document.querySelectorAll('[ar-loot]');
+
+    // Ícone de monstro (ponto vermelho)
+    const monsterIcon = L.divIcon({
+        className: 'monster-marker',
+        iconSize: [8, 8],
+        iconAnchor: [4, 4]
+    });
+
+    // Ícone de loot (ponto amarelo)
+    const lootIcon = L.divIcon({
+        className: 'loot-marker',
+        iconSize: [6, 6],
+        iconAnchor: [3, 3]
+    });
+
+    // Adicionar marcadores de monstros
+    monsters.forEach(monster => {
+        const pos = monster.getAttribute('position');
+        if (pos) {
+            // Converter posição 3D para offset no mapa (aproximação simples)
+            const offsetLat = pos.z * 0.00001;
+            const offsetLng = pos.x * 0.00001;
+            const markerLat = latitude + offsetLat;
+            const markerLng = longitude + offsetLng;
+
+            const marker = L.marker([markerLat, markerLng], { icon: monsterIcon })
+                .addTo(GeoState.map);
+            GeoState.monsterMarkers.push(marker);
+        }
+    });
+
+    // Adicionar marcadores de loot
+    loot.forEach(item => {
+        const pos = item.getAttribute('position');
+        if (pos) {
+            // Converter posição 3D para offset no mapa (aproximação simples)
+            const offsetLat = pos.z * 0.00001;
+            const offsetLng = pos.x * 0.00001;
+            const markerLat = latitude + offsetLat;
+            const markerLng = longitude + offsetLng;
+
+            const marker = L.marker([markerLat, markerLng], { icon: lootIcon })
+                .addTo(GeoState.map);
+            GeoState.lootMarkers.push(marker);
+        }
+    });
 }
 
 function updateARLocation() {
