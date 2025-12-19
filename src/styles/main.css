@@ -1113,8 +1113,9 @@ input {
   border-radius: 20px;
   padding: 20px;
   transform: translateY(100%) scale(0.9);
-  transition: transform 0.3s, opacity 0.3s, pointer-events 0s 0.3s;
+  transition: transform 0.3s, opacity 0.3s, visibility 0s 0.3s;
   pointer-events: none;
+  visibility: hidden;
   z-index: 100;
   opacity: 0;
 }
@@ -1123,7 +1124,8 @@ input {
   transform: translateY(0) scale(1);
   opacity: 1;
   pointer-events: auto;
-  transition: transform 0.3s, opacity 0.3s, pointer-events 0s;
+  visibility: visible;
+  transition: transform 0.3s, opacity 0.3s, visibility 0s;
 }
 
 .ar-inv-header {
