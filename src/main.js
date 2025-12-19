@@ -25,7 +25,8 @@ const GameData = {
             { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'] },
             { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'] },
             { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'] },
-            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'] }
+            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'] },
+            { id: 'salt', name: 'Sal', icon: '🧂', quantity: 0, damage: 25, weakness: ['ghost', 'demon'] }
         ],
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
@@ -677,13 +678,10 @@ AFRAME.registerSystem('monster-spawner', {
     spawnLoot: function () {
         const position = this.getSpawnPosition();
 
-        // Tipos de loot possíveis
+        // Tipos de loot possíveis - apenas itens com modelos 3D
         const lootTypes = [
-            { id: 'bandage', icon: '🩹', name: 'Bandagem', category: 'healing', healAmount: 20 },
-            { id: 'iron_bar', icon: '🔩', name: 'Barra de Ferro', category: 'weapons', damage: 25 },
-            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35 },
-            { id: 'medkit', icon: '💊', name: 'Kit Médico', category: 'healing', healAmount: 50 },
-            { id: 'silver_coin', icon: '🪙', name: 'Moeda de Prata', category: 'misc' }
+            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35, model: 'holy-water-model' },
+            { id: 'salt', icon: '🧂', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model' }
         ];
 
         const loot = lootTypes[Math.floor(Math.random() * lootTypes.length)];
@@ -727,44 +725,32 @@ AFRAME.registerSystem('monster-spawner', {
 
 AFRAME.registerComponent('ar-loot', {
     schema: {
-        id: { type: 'string', default: 'bandage' },
-        icon: { type: 'string', default: '🎁' },
+        id: { type: 'string', default: 'holy_water' },
+        icon: { type: 'string', default: '💧' },
         name: { type: 'string', default: 'Item' },
-        category: { type: 'string', default: 'misc' },
+        category: { type: 'string', default: 'weapons' },
         healAmount: { type: 'number', default: 0 },
-        damage: { type: 'number', default: 0 }
+        damage: { type: 'number', default: 0 },
+        model: { type: 'string', default: 'holy-water-model' }
     },
 
     init: function () {
-        // Criar visual do loot - esfera brilhante
-        this.el.setAttribute('geometry', {
-            primitive: 'sphere',
-            radius: 0.15
-        });
+        // Carregar modelo 3D do loot
+        this.el.setAttribute('gltf-model', `#${this.data.model}`);
 
-        // Cor baseada na categoria
-        const colorMap = {
-            healing: '#44ff44',
-            weapons: '#ff6b6b',
-            misc: '#ffcc00'
-        };
-
-        this.el.setAttribute('material', {
-            color: colorMap[this.data.category] || '#ffffff',
-            emissive: colorMap[this.data.category] || '#ffffff',
-            emissiveIntensity: 0.5,
-            transparent: true,
-            opacity: 0.8
-        });
+        // Escala apropriada para os itens
+        this.el.setAttribute('scale', '0.3 0.3 0.3');
 
         // Animação de flutuação
+        const pos = this.el.getAttribute('position');
         this.el.setAttribute('animation', {
             property: 'position',
             dir: 'alternate',
             loop: true,
-            dur: 1000,
+            dur: 1500,
             easing: 'easeInOutSine',
-            to: `${this.el.getAttribute('position').x} ${this.el.getAttribute('position').y + 0.1} ${this.el.getAttribute('position').z}`
+            from: `${pos.x} ${pos.y} ${pos.z}`,
+            to: `${pos.x} ${pos.y + 0.15} ${pos.z}`
         });
 
         // Animação de rotação
@@ -772,9 +758,17 @@ AFRAME.registerComponent('ar-loot', {
             property: 'rotation',
             to: '0 360 0',
             loop: true,
-            dur: 3000,
+            dur: 4000,
             easing: 'linear'
         });
+
+        // Adicionar efeito de brilho (luz pontual)
+        const light = document.createElement('a-light');
+        light.setAttribute('type', 'point');
+        light.setAttribute('color', this.data.category === 'healing' ? '#44ff44' : '#4ecdc4');
+        light.setAttribute('intensity', '0.8');
+        light.setAttribute('distance', '1');
+        this.el.appendChild(light);
 
         // Registrar no sistema de combate para detecção
         const combatSystem = this.el.sceneEl.systems['combat'];
