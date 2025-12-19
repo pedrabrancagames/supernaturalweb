@@ -886,6 +886,8 @@ input {
   object-fit: contain;
   object-position: bottom center;
   filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+  transform: scale(1.5);
+  transform-origin: bottom center;
 }
 
 .ar-btn-exit {
