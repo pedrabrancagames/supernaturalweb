@@ -1157,9 +1157,6 @@ function initARGeolocation() {
         return;
     }
 
-    // Inicializar bússola
-    initCompass();
-
     navigator.geolocation.getCurrentPosition(
         (pos) => {
             GeoState.currentPosition = {
@@ -1168,7 +1165,8 @@ function initARGeolocation() {
             };
             // Gerar spawns globais baseados na posição real
             generateGlobalSpawns();
-            initMiniMap();
+            // Iniciar radar de direção
+            startRadarUpdate();
             updateARLocation();
             startWatchingPosition();
         },
@@ -1177,42 +1175,90 @@ function initARGeolocation() {
     );
 }
 
-function initMiniMap() {
-    if (GeoState.map) return; // Já inicializado
+// Radar de direção - atualiza marcadores baseado na posição 3D dos monstros/loot
+let radarUpdateInterval = null;
 
-    const mapContainer = document.getElementById('ar-map');
-    if (!mapContainer || !GeoState.currentPosition) return;
+function startRadarUpdate() {
+    if (radarUpdateInterval) return;
 
-    const { latitude, longitude } = GeoState.currentPosition;
+    // Atualizar radar a cada 500ms
+    radarUpdateInterval = setInterval(updateRadar, 500);
+    console.log('📡 Radar de direção ativado');
+}
 
-    // Criar mapa Leaflet
-    GeoState.map = L.map('ar-map', {
-        center: [latitude, longitude],
-        zoom: 17,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false
+function stopRadarUpdate() {
+    if (radarUpdateInterval) {
+        clearInterval(radarUpdateInterval);
+        radarUpdateInterval = null;
+    }
+}
+
+function updateRadar() {
+    const markersContainer = document.getElementById('radar-markers');
+    if (!markersContainer) return;
+
+    // Limpar marcadores antigos
+    markersContainer.innerHTML = '';
+
+    // Obter monstros e loot ativos na cena AR
+    const monsters = document.querySelectorAll('[ar-monster]');
+    const loot = document.querySelectorAll('[ar-loot]');
+
+    // Obter rotação da câmera (para calcular direção relativa)
+    const camera = document.getElementById('camera');
+    let cameraY = 0;
+    if (camera) {
+        const rotation = camera.getAttribute('rotation');
+        if (rotation) {
+            cameraY = rotation.y || 0;
+        }
+    }
+
+    // Raio do radar (em pixels, metade do tamanho do radar menos padding)
+    const radarRadius = 40;
+
+    // Adicionar marcadores de monstros
+    monsters.forEach(monster => {
+        const pos = monster.getAttribute('position');
+        if (pos) {
+            const marker = createRadarMarker(pos.x, pos.z, cameraY, radarRadius, 'monster');
+            if (marker) markersContainer.appendChild(marker);
+        }
     });
 
-    // Tile layer (OpenStreetMap escuro)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19
-    }).addTo(GeoState.map);
-
-    // Marcador do jogador
-    const playerIcon = L.divIcon({
-        className: 'player-marker',
-        iconSize: [12, 12],
-        iconAnchor: [6, 6]
+    // Adicionar marcadores de loot
+    loot.forEach(item => {
+        const pos = item.getAttribute('position');
+        if (pos) {
+            const marker = createRadarMarker(pos.x, pos.z, cameraY, radarRadius, 'loot');
+            if (marker) markersContainer.appendChild(marker);
+        }
     });
+}
 
-    GeoState.playerMarker = L.marker([latitude, longitude], { icon: playerIcon })
-        .addTo(GeoState.map);
+function createRadarMarker(x, z, cameraY, radarRadius, type) {
+    // Calcular distância e ângulo do objeto
+    const distance = Math.sqrt(x * x + z * z);
 
-    console.log('🗺️ Mini-mapa inicializado');
+    // Se muito longe, não mostrar (ou mostrar na borda)
+    const maxDistance = 5; // 5 metros para representar o raio máximo do radar
+    const normalizedDistance = Math.min(distance / maxDistance, 1);
+
+    // Calcular ângulo em relação à câmera
+    let angle = Math.atan2(x, -z); // Ângulo do objeto
+    angle = angle - (cameraY * Math.PI / 180); // Ajustar pela rotação da câmera
+
+    // Converter para posição no radar (50 é o centro do radar de 100px)
+    const radarX = 50 + Math.sin(angle) * (normalizedDistance * radarRadius);
+    const radarY = 50 - Math.cos(angle) * (normalizedDistance * radarRadius);
+
+    // Criar elemento do marcador
+    const marker = document.createElement('div');
+    marker.className = `radar-marker ${type}`;
+    marker.style.left = `${radarX}px`;
+    marker.style.top = `${radarY}px`;
+
+    return marker;
 }
 
 function startWatchingPosition() {
@@ -1224,7 +1270,6 @@ function startWatchingPosition() {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude
             };
-            updateMiniMap();
             updateARLocation();
         },
         (err) => console.error('Watch error:', err),
@@ -1232,86 +1277,6 @@ function startWatchingPosition() {
     );
 
     GeoState.isWatching = true;
-}
-
-function updateMiniMap() {
-    if (!GeoState.map || !GeoState.currentPosition) return;
-
-    const { latitude, longitude } = GeoState.currentPosition;
-
-    // Mover mapa para manter jogador no centro
-    GeoState.map.setView([latitude, longitude], GeoState.map.getZoom(), { animate: true });
-
-    // Atualizar marcador do jogador
-    if (GeoState.playerMarker) {
-        GeoState.playerMarker.setLatLng([latitude, longitude]);
-    }
-
-    // Atualizar marcadores de monstros e loot no mini-mapa
-    updateMinimapMarkers();
-}
-
-// Atualizar marcadores de monstros e loot no mini-mapa
-function updateMinimapMarkers() {
-    if (!GeoState.map || !GeoState.currentPosition) return;
-
-    const { latitude, longitude } = GeoState.currentPosition;
-
-    // Remover marcadores antigos
-    GeoState.monsterMarkers.forEach(marker => marker.remove());
-    GeoState.lootMarkers.forEach(marker => marker.remove());
-    GeoState.monsterMarkers = [];
-    GeoState.lootMarkers = [];
-
-    // Obter monstros e loot ativos na cena
-    const monsters = document.querySelectorAll('[ar-monster]');
-    const loot = document.querySelectorAll('[ar-loot]');
-
-    // Ícone de monstro (ponto vermelho)
-    const monsterIcon = L.divIcon({
-        className: 'monster-marker',
-        iconSize: [8, 8],
-        iconAnchor: [4, 4]
-    });
-
-    // Ícone de loot (ponto amarelo)
-    const lootIcon = L.divIcon({
-        className: 'loot-marker',
-        iconSize: [6, 6],
-        iconAnchor: [3, 3]
-    });
-
-    // Adicionar marcadores de monstros
-    monsters.forEach(monster => {
-        const pos = monster.getAttribute('position');
-        if (pos) {
-            // Converter posição 3D para offset no mapa (aproximação simples)
-            const offsetLat = pos.z * 0.00001;
-            const offsetLng = pos.x * 0.00001;
-            const markerLat = latitude + offsetLat;
-            const markerLng = longitude + offsetLng;
-
-            const marker = L.marker([markerLat, markerLng], { icon: monsterIcon })
-                .addTo(GeoState.map);
-            GeoState.monsterMarkers.push(marker);
-        }
-    });
-
-    // Adicionar marcadores de loot
-    loot.forEach(item => {
-        const pos = item.getAttribute('position');
-        if (pos) {
-            // Converter posição 3D para offset no mapa (aproximação simples)
-            const offsetLat = pos.z * 0.00001;
-            const offsetLng = pos.x * 0.00001;
-            const markerLat = latitude + offsetLat;
-            const markerLng = longitude + offsetLng;
-
-            const marker = L.marker([markerLat, markerLng], { icon: lootIcon })
-                .addTo(GeoState.map);
-            GeoState.lootMarkers.push(marker);
-        }
-    });
 }
 
 function updateARLocation() {

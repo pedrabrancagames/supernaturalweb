@@ -279,9 +279,17 @@
       <div class="ar-crosshair"></div>
       <div class="ar-hit-feedback" id="ar-hit-feedback"></div>
 
-      <!-- Mini-Mapa Real com Leaflet -->
-      <div class="ar-minimap">
-        <div id="ar-map"></div>
+      <!-- Radar de Direção (Bússola) -->
+      <div class="ar-radar" id="ar-radar">
+        <div class="radar-compass">
+          <div class="radar-north">N</div>
+          <div class="radar-center"></div>
+          <div class="radar-ring"></div>
+          <div class="radar-ring outer"></div>
+        </div>
+        <div class="radar-markers" id="radar-markers">
+          <!-- Marcadores de monstros e loot serão adicionados via JS -->
+        </div>
       </div>
 
       <div class="ar-location" id="ar-location">

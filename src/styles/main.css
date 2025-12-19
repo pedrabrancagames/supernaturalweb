@@ -982,87 +982,166 @@ input {
   opacity: 1;
 }
 
-/* Mini-Mapa Real com Leaflet */
-.ar-minimap {
+/* ========================================
+   RADAR DE DIREÇÃO (Substituiu Mini-mapa)
+   ======================================== */
+.ar-radar {
   position: absolute;
   bottom: 30px;
   left: 20px;
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  overflow: visible;
-  border: 3px solid rgba(0, 255, 0, 0.5);
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+  background: rgba(0, 0, 0, 0.8);
+  border: 3px solid rgba(0, 255, 0, 0.6);
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 30px rgba(0, 50, 0, 0.5);
   z-index: 15;
   pointer-events: none;
-  transition: transform 0.1s ease-out;
-}
-
-/* Container interno para manter o mapa redondo */
-.ar-minimap::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 10px solid #ff4444;
-  z-index: 20;
-  filter: drop-shadow(0 0 3px #ff4444);
-}
-
-/* Círculo de corte para o mapa */
-.ar-minimap #ar-map {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
   overflow: hidden;
 }
 
-/* Marcador do jogador no mini-mapa */
-.player-marker {
-  width: 12px;
-  height: 12px;
+.radar-compass {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+/* Indicador de Norte */
+.radar-north {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: #ff4444;
+  text-shadow: 0 0 5px #ff4444;
+  z-index: 10;
+}
+
+/* Ponto central (jogador) */
+.radar-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
   background: #00aaff;
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 0 10px #00aaff;
+  z-index: 5;
 }
 
-/* Marcador de monstro no mini-mapa (vermelho) */
-.monster-marker {
+/* Anéis do radar */
+.radar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  height: 50%;
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 50%;
+}
+
+.radar-ring.outer {
+  width: 80%;
+  height: 80%;
+}
+
+/* Linhas de grade */
+.radar-compass::before,
+.radar-compass::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 255, 0, 0.2);
+}
+
+.radar-compass::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.radar-compass::after {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+/* Container de marcadores */
+.radar-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Marcador de monstro no radar */
+.radar-marker {
+  position: absolute;
   width: 8px;
   height: 8px;
-  background: #ff4444;
-  border: 1px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 6px #ff4444;
-  animation: monsterBlink 1s ease-in-out infinite;
+  transform: translate(-50%, -50%);
+  z-index: 3;
 }
 
-@keyframes monsterBlink {
+.radar-marker.monster {
+  background: #ff4444;
+  box-shadow: 0 0 6px #ff4444;
+  animation: radarBlink 1s ease-in-out infinite;
+}
+
+.radar-marker.loot {
+  background: #ffcc00;
+  box-shadow: 0 0 5px #ffcc00;
+  width: 6px;
+  height: 6px;
+}
+
+@keyframes radarBlink {
 
   0%,
   100% {
     opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 
   50% {
-    opacity: 0.6;
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.8);
   }
 }
 
-/* Marcador de loot no mini-mapa (amarelo) */
-.loot-marker {
-  width: 6px;
-  height: 6px;
-  background: #ffcc00;
-  border: 1px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 5px #ffcc00;
+/* Efeito de varredura (sweep) */
+.ar-radar::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(0, 255, 0, 0.8), transparent);
+  transform-origin: left center;
+  animation: radarSweep 3s linear infinite;
+}
+
+@keyframes radarSweep {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Info GPS removida - esconder */
