@@ -1381,36 +1381,6 @@ function useHealingItem(item) {
     console.log(`💊 Curou ${healed} HP! Total: ${GameData.player.hp}/${GameData.player.maxHp}`);
 }
 
-function applyAccessoryEffect(accessory) {
-    if (!accessory) return;
-
-    const scene = document.getElementById('ar-scene');
-    if (!scene) return;
-
-    switch (accessory.id) {
-        case 'camera':
-            // Efeito de filmadora - grayscale
-            scene.style.filter = 'grayscale(100%)';
-            break;
-        case 'uv_light':
-            // Efeito de lanterna UV
-            scene.style.filter = 'hue-rotate(270deg) brightness(1.2)';
-            break;
-        case 'emf':
-            // EMF não tem efeito visual
-            break;
-    }
-
-    console.log(`🔧 Efeito de ${accessory.name} aplicado`);
-}
-
-function removeAccessoryEffect() {
-    const scene = document.getElementById('ar-scene');
-    if (scene) {
-        scene.style.filter = '';
-    }
-}
-
 // ============================================
 // EVENT LISTENERS
 // ============================================
