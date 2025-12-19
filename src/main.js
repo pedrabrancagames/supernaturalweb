@@ -1024,13 +1024,132 @@ function hideFilterIndicator() {
 const GeoState = {
     currentPosition: null,
     monsterSpawns: [],
+    lootSpawns: [],
     isWatching: false,
     map: null,
     playerMarker: null,
     watchId: null,
     monsterMarkers: [],
-    lootMarkers: []
+    lootMarkers: [],
+    compassHeading: 0,
+    isCompassActive: false,
+    fullMapMonsterMarkers: [],
+    fullMapLootMarkers: []
 };
+
+// Inicializar bússola para rotação do mini-mapa
+function initCompass() {
+    if (window.DeviceOrientationEvent) {
+        // Verificar se precisa de permissão (iOS 13+)
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permission => {
+                    if (permission === 'granted') {
+                        window.addEventListener('deviceorientation', handleCompass, true);
+                        GeoState.isCompassActive = true;
+                        console.log('🧭 Bússola ativada (iOS)');
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Android e outros
+            window.addEventListener('deviceorientationabsolute', handleCompass, true);
+            window.addEventListener('deviceorientation', handleCompass, true);
+            GeoState.isCompassActive = true;
+            console.log('🧭 Bússola ativada');
+        }
+    }
+}
+
+function handleCompass(event) {
+    let heading = 0;
+
+    // Obter heading (direção em graus)
+    if (event.webkitCompassHeading !== undefined) {
+        // iOS
+        heading = event.webkitCompassHeading;
+    } else if (event.alpha !== null) {
+        // Android - alpha é a rotação em torno do eixo Z
+        heading = 360 - event.alpha;
+    }
+
+    GeoState.compassHeading = heading;
+
+    // Rotacionar o container do mini-mapa
+    const minimapContainer = document.querySelector('.ar-minimap');
+    if (minimapContainer) {
+        minimapContainer.style.transform = `rotate(${-heading}deg)`;
+    }
+}
+
+// Gerar spawns de monstros e loot baseados na posição real
+function generateGlobalSpawns() {
+    if (!GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Limpar spawns antigos
+    GeoState.monsterSpawns = [];
+    GeoState.lootSpawns = [];
+
+    // Tipos de monstros
+    const monsterTypes = [
+        { type: 'werewolf', name: 'Lobisomem', icon: '🐺' },
+        { type: 'vampire', name: 'Vampiro', icon: '🧛' },
+        { type: 'ghost', name: 'Fantasma', icon: '👻' },
+        { type: 'demon', name: 'Demônio', icon: '😈' }
+    ];
+
+    // Tipos de loot
+    const lootTypes = [
+        { id: 'holy_water', name: 'Água Benta', icon: '💧' },
+        { id: 'salt', name: 'Sal', icon: '🧂' },
+        { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩' },
+        { id: 'bandage', name: 'Bandagem', icon: '🩹' }
+    ];
+
+    // Gerar 5-8 monstros em um raio de 500m
+    const monsterCount = 5 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < monsterCount; i++) {
+        const distance = 50 + Math.random() * 450; // 50-500 metros
+        const angle = Math.random() * 2 * Math.PI;
+
+        const deltaLat = (distance / 111000) * Math.cos(angle);
+        const deltaLng = (distance / (111000 * Math.cos(latitude * Math.PI / 180))) * Math.sin(angle);
+
+        const monster = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+
+        GeoState.monsterSpawns.push({
+            ...monster,
+            id: `monster-${i}`,
+            latitude: latitude + deltaLat,
+            longitude: longitude + deltaLng,
+            distance: Math.round(distance)
+        });
+    }
+
+    // Gerar 8-12 loots em um raio de 300m
+    const lootCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < lootCount; i++) {
+        const distance = 30 + Math.random() * 270; // 30-300 metros
+        const angle = Math.random() * 2 * Math.PI;
+
+        const deltaLat = (distance / 111000) * Math.cos(angle);
+        const deltaLng = (distance / (111000 * Math.cos(latitude * Math.PI / 180))) * Math.sin(angle);
+
+        const loot = lootTypes[Math.floor(Math.random() * lootTypes.length)];
+
+        GeoState.lootSpawns.push({
+            ...loot,
+            spawnId: `loot-${i}`,
+            latitude: latitude + deltaLat,
+            longitude: longitude + deltaLng,
+            distance: Math.round(distance)
+        });
+    }
+
+    console.log(`🎯 Gerados ${monsterCount} monstros e ${lootCount} loots no mapa`);
+}
 
 function initARGeolocation() {
     if (!navigator.geolocation) {
@@ -1038,12 +1157,17 @@ function initARGeolocation() {
         return;
     }
 
+    // Inicializar bússola
+    initCompass();
+
     navigator.geolocation.getCurrentPosition(
         (pos) => {
             GeoState.currentPosition = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude
             };
+            // Gerar spawns globais baseados na posição real
+            generateGlobalSpawns();
             initMiniMap();
             updateARLocation();
             startWatchingPosition();
@@ -1243,6 +1367,11 @@ function createFullMap() {
 
     const { latitude, longitude } = GeoState.currentPosition;
 
+    // Gerar spawns se ainda não existirem
+    if (GeoState.monsterSpawns.length === 0) {
+        generateGlobalSpawns();
+    }
+
     // Criar mapa Leaflet
     fullMap = L.map('full-map', {
         center: [latitude, longitude],
@@ -1258,20 +1387,54 @@ function createFullMap() {
 
     // Marcador do jogador
     const playerIcon = L.divIcon({
-        className: 'player-marker',
-        html: '<div style="width:16px;height:16px;background:#00aaff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 15px #00aaff;"></div>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+        className: 'player-marker-full',
+        html: '<div style="width:20px;height:20px;background:#00aaff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 20px #00aaff;"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
     });
 
     fullMapMarker = L.marker([latitude, longitude], { icon: playerIcon })
         .addTo(fullMap)
-        .bindPopup('Você está aqui');
+        .bindPopup('📍 Você está aqui');
+
+    // Adicionar marcadores de monstros
+    GeoState.fullMapMonsterMarkers = [];
+    GeoState.monsterSpawns.forEach(monster => {
+        const monsterIcon = L.divIcon({
+            className: 'monster-marker-full',
+            html: `<div style="width:24px;height:24px;background:#ff4444;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 10px #ff4444;">${monster.icon}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([monster.latitude, monster.longitude], { icon: monsterIcon })
+            .addTo(fullMap)
+            .bindPopup(`<b>${monster.icon} ${monster.name}</b><br>Distância: ~${monster.distance}m`);
+
+        GeoState.fullMapMonsterMarkers.push(marker);
+    });
+
+    // Adicionar marcadores de loot
+    GeoState.fullMapLootMarkers = [];
+    GeoState.lootSpawns.forEach(loot => {
+        const lootIcon = L.divIcon({
+            className: 'loot-marker-full',
+            html: `<div style="width:20px;height:20px;background:#ffcc00;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 8px #ffcc00;">${loot.icon}</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const marker = L.marker([loot.latitude, loot.longitude], { icon: lootIcon })
+            .addTo(fullMap)
+            .bindPopup(`<b>${loot.icon} ${loot.name}</b><br>Distância: ~${loot.distance}m`);
+
+        GeoState.fullMapLootMarkers.push(marker);
+    });
 
     // Forçar redimensionamento
     setTimeout(() => fullMap.invalidateSize(), 100);
 
-    console.log('🗺️ Mapa full inicializado');
+    console.log('🗺️ Mapa full inicializado com pins de monstros e loot');
 }
 
 // ============================================
