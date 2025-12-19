@@ -910,8 +910,11 @@ function addDiaryEntry(text) {
  * Aplicar efeito visual do acessório equipado
  */
 function applyAccessoryEffect(item) {
-    const screenHunt = document.getElementById('screen-hunt');
-    if (!screenHunt) return;
+    const filterOverlay = document.getElementById('camera-filter-overlay');
+    if (!filterOverlay) {
+        console.error('❌ Overlay de filtro não encontrado');
+        return;
+    }
 
     // Remover filtros anteriores
     removeAccessoryEffect();
@@ -919,14 +922,14 @@ function applyAccessoryEffect(item) {
     // Aplicar filtro baseado no acessório
     switch (item.id) {
         case 'camera':
-            screenHunt.classList.add('filter-camera');
+            filterOverlay.classList.add('filter-camera');
             showFilterIndicator('📹 Filmadora Ativa', 'camera');
             // Revelar fantasmas
             updateGhostVisibility(true);
             console.log('📹 Filtro de câmera aplicado - Fantasmas visíveis');
             break;
         case 'uv_light':
-            screenHunt.classList.add('filter-uv');
+            filterOverlay.classList.add('filter-uv');
             showFilterIndicator('🔦 Lanterna UV Ativa', 'uv');
             // TODO: Revelar mensagens ocultas
             console.log('🔦 Filtro UV aplicado');
@@ -943,11 +946,11 @@ function applyAccessoryEffect(item) {
  * Remover todos os efeitos visuais de acessórios
  */
 function removeAccessoryEffect() {
-    const screenHunt = document.getElementById('screen-hunt');
-    if (!screenHunt) return;
-
-    // Remover todas as classes de filtro
-    screenHunt.classList.remove('filter-camera', 'filter-uv');
+    const filterOverlay = document.getElementById('camera-filter-overlay');
+    if (filterOverlay) {
+        // Remover todas as classes de filtro
+        filterOverlay.classList.remove('filter-camera', 'filter-uv');
+    }
 
     // Remover indicador
     hideFilterIndicator();
