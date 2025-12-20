@@ -378,7 +378,7 @@ AFRAME.registerComponent('ar-monster', {
         };
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
-        this.el.setAttribute('scale', '0.5 0.5 0.5');
+        this.el.setAttribute('scale', '1 1 1');
         // Monstros não ficam mais rodando - removida animação de rotação
 
         // Fantasmas começam invisíveis - precisam da Filmadora para serem vistos
@@ -784,8 +784,8 @@ AFRAME.registerComponent('ar-loot', {
         // Carregar modelo 3D do loot
         this.el.setAttribute('gltf-model', `#${this.data.model}`);
 
-        // Escala apropriada para os itens
-        this.el.setAttribute('scale', '0.3 0.3 0.3');
+        // Escala apropriada para os itens (dobro do anterior)
+        this.el.setAttribute('scale', '0.6 0.6 0.6');
 
         // Animação de flutuação
         const pos = this.el.getAttribute('position');
