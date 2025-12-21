@@ -1177,8 +1177,8 @@ input {
 }
 
 .ar-slot {
-  width: 100px;
-  height: 100px;
+  width: 75px;
+  height: 75px;
   background: rgba(0, 0, 0, 0.7);
   border: none;
   border-radius: 15px;
