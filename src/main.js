@@ -105,33 +105,138 @@ function goBack() {
 }
 
 // ============================================
-// SPLASH SCREEN
+// SPLASH SCREEN - PRÉ-CARREGAMENTO DE RECURSOS
 // ============================================
 
-function initSplash() {
+// Lista de todos os recursos para pré-carregar
+const PRELOAD_RESOURCES = {
+    images: [
+        '/images/bg-espingarda.png',
+        '/images/bg-faca.png',
+        '/images/bg-ferro.png',
+        '/images/bg-mao.png',
+        '/images/icon-agua-benta.png',
+        '/images/icon-espingarda.png',
+        '/images/icon-faca.png',
+        '/images/icon-ferro.png',
+        '/images/icon-mao.png',
+        '/images/icon-sal.png',
+        '/images/inventario-armas.png',
+        '/images/inventario-assessorios.png',
+        '/images/inventario-cura.png'
+    ],
+    models: [
+        '/werewolf.glb',
+        '/vampire.glb',
+        '/ghost.glb',
+        '/demon.glb',
+        '/holy-water.glb',
+        '/salt.glb'
+    ]
+};
+
+// Cache para armazenar recursos carregados
+const resourceCache = {
+    images: {},
+    models: {}
+};
+
+// Função para pré-carregar uma imagem
+function preloadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            resourceCache.images[src] = img;
+            resolve(src);
+        };
+        img.onerror = () => {
+            console.warn(`⚠️ Falha ao carregar imagem: ${src}`);
+            resolve(src); // Resolve mesmo com erro para não travar
+        };
+        img.src = src;
+    });
+}
+
+// Função para pré-carregar um modelo 3D (fetch para cache do browser)
+function preloadModel(src) {
+    return fetch(src)
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error(`HTTP ${response.status}`);
+        })
+        .then(blob => {
+            resourceCache.models[src] = URL.createObjectURL(blob);
+            return src;
+        })
+        .catch(err => {
+            console.warn(`⚠️ Falha ao carregar modelo: ${src}`, err);
+            return src; // Resolve mesmo com erro para não travar
+        });
+}
+
+// Extrair nome do arquivo do caminho
+function getFileName(path) {
+    return path.split('/').pop();
+}
+
+async function initSplash() {
     const progress = document.getElementById('splash-progress');
     const status = document.getElementById('splash-status');
 
-    const steps = [
-        { progress: 20, text: 'Carregando recursos...' },
-        { progress: 40, text: 'Verificando GPS...' },
-        { progress: 60, text: 'Preparando AR...' },
-        { progress: 80, text: 'Invocando entidades...' },
-        { progress: 100, text: 'Pronto!' }
+    const allResources = [
+        ...PRELOAD_RESOURCES.images.map(src => ({ type: 'image', src })),
+        ...PRELOAD_RESOURCES.models.map(src => ({ type: 'model', src }))
     ];
 
-    let currentStep = 0;
+    const totalResources = allResources.length;
+    let loadedCount = 0;
 
-    const interval = setInterval(() => {
-        if (currentStep < steps.length) {
-            progress.style.width = `${steps[currentStep].progress}%`;
-            status.textContent = steps[currentStep].text;
-            currentStep++;
+    status.textContent = 'Iniciando carregamento...';
+    progress.style.width = '0%';
+
+    // Carregar recursos em paralelo, mas atualizar UI sequencialmente
+    const loadPromises = allResources.map(async (resource, index) => {
+        // Atualizar status antes de carregar
+        const fileName = getFileName(resource.src);
+
+        if (resource.type === 'image') {
+            await preloadImage(resource.src);
         } else {
-            clearInterval(interval);
-            setTimeout(() => goto('home'), 500);
+            await preloadModel(resource.src);
         }
-    }, 600);
+
+        loadedCount++;
+        const progressPercent = Math.round((loadedCount / totalResources) * 90); // Até 90%
+
+        progress.style.width = `${progressPercent}%`;
+        status.textContent = `Carregando: ${fileName}`;
+
+        return resource.src;
+    });
+
+    try {
+        await Promise.all(loadPromises);
+
+        // Etapa final
+        progress.style.width = '95%';
+        status.textContent = 'Preparando AR...';
+        await new Promise(r => setTimeout(r, 300));
+
+        progress.style.width = '100%';
+        status.textContent = 'Pronto!';
+        await new Promise(r => setTimeout(r, 500));
+
+        console.log(`✅ ${totalResources} recursos pré-carregados com sucesso!`);
+        goto('home');
+
+    } catch (error) {
+        console.error('❌ Erro no carregamento:', error);
+        status.textContent = 'Erro ao carregar recursos';
+        // Mesmo com erro, vai para home após delay
+        setTimeout(() => goto('home'), 2000);
+    }
 }
 
 // ============================================
