@@ -1171,40 +1171,28 @@ input {
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   pointer-events: auto;
   z-index: 10;
 }
 
 .ar-slot {
-  width: 50px;
-  height: 50px;
+  width: 100px;
+  height: 100px;
   background: rgba(0, 0, 0, 0.7);
-  border: 2px solid #444;
-  border-radius: 10px;
+  border: none;
+  border-radius: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
 }
 
-.ar-slot.weapon {
-  border-color: #ff6b6b;
-}
-
-.ar-slot.accessory {
-  border-color: #4ecdc4;
-}
-
-.ar-slot.healing {
-  border-color: #95e1a3;
-}
-
 .ar-slot img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 4px;
+  padding: 8px;
 }
 
 .ar-btn-fire {
