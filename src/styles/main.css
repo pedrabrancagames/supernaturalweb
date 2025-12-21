@@ -1011,18 +1011,8 @@ input {
    RADAR DE DIREÇÃO (Substituiu Mini-mapa)
    ======================================== */
 .ar-radar {
-  position: absolute;
-  bottom: 30px;
-  left: 20px;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.8);
-  border: 3px solid rgba(0, 255, 0, 0.6);
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 30px rgba(0, 50, 0, 0.5);
-  z-index: 15;
-  pointer-events: none;
-  overflow: hidden;
+  display: none;
+  /* Radar removido */
 }
 
 .radar-compass {
@@ -1176,8 +1166,9 @@ input {
 
 .ar-slots {
   position: absolute;
-  bottom: 30px;
-  right: 20px;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1315,20 +1306,25 @@ input {
 }
 
 @keyframes weaponFire {
+
   /* Recuo inicial - arma vai pra trás e pra cima */
   0% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
+
   10% {
     transform: scale(1.5) translateY(-30px) translateX(5px) rotate(-5deg);
   }
+
   /* Volta para posição */
   30% {
     transform: scale(1.5) translateY(-10px) translateX(2px) rotate(-2deg);
   }
+
   50% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
+
   /* Posição final */
   100% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
@@ -1341,28 +1337,35 @@ input {
 }
 
 @keyframes weaponReload {
+
   /* Início - posição normal */
   0% {
     transform: scale(1.5) translateY(0) translateX(0);
   }
+
   /* Puxar pump para trás (mão puxa) */
   15% {
     transform: scale(1.5) translateY(15px) translateX(-10px);
   }
+
   30% {
     transform: scale(1.5) translateY(25px) translateX(-15px);
   }
+
   /* Segurar brevemente */
   45% {
     transform: scale(1.5) translateY(25px) translateX(-15px);
   }
+
   /* Empurrar pump de volta */
   60% {
     transform: scale(1.5) translateY(10px) translateX(-5px);
   }
+
   75% {
     transform: scale(1.5) translateY(0) translateX(0);
   }
+
   /* Pequeno ajuste final */
   100% {
     transform: scale(1.5) translateY(0) translateX(0);
@@ -1375,44 +1378,53 @@ input {
 }
 
 @keyframes weaponFireAndReload {
+
   /* === FASE 1: RECUO DO DISPARO === */
   0% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
+
   /* Recuo forte */
   8% {
     transform: scale(1.5) translateY(-35px) translateX(8px) rotate(-6deg);
   }
+
   /* Volta parcial */
   20% {
     transform: scale(1.5) translateY(-10px) translateX(2px) rotate(-1deg);
   }
+
   /* Posição estável pós-disparo */
   30% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
-  
+
   /* === FASE 2: RECARGA PUMP === */
   /* Pequena pausa */
   35% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
+
   /* Puxar pump */
   50% {
     transform: scale(1.5) translateY(20px) translateX(-12px) rotate(2deg);
   }
+
   /* Pump no máximo */
   60% {
     transform: scale(1.5) translateY(30px) translateX(-18px) rotate(3deg);
   }
+
   /* Empurrar pump de volta */
   75% {
     transform: scale(1.5) translateY(10px) translateX(-5px) rotate(1deg);
   }
+
   /* Posição final */
   90% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
+
   100% {
     transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
   }
@@ -1439,10 +1451,12 @@ input {
     opacity: 1;
     transform: translate(-50%, -50%) scale(0.5);
   }
+
   50% {
     opacity: 0.8;
     transform: translate(-50%, -50%) scale(1.2);
   }
+
   100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(1.5);
@@ -1455,18 +1469,24 @@ input {
 }
 
 @keyframes screenShake {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0, 0);
   }
+
   20% {
     transform: translate(-3px, 2px);
   }
+
   40% {
     transform: translate(3px, -2px);
   }
+
   60% {
     transform: translate(-2px, 3px);
   }
+
   80% {
     transform: translate(2px, -1px);
   }
