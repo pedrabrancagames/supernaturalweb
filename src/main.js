@@ -315,21 +315,8 @@ function updateARHUD() {
         hpFill.style.width = `${(GameData.player.hp / GameData.player.maxHp) * 100}%`;
     }
 
-    // Atualizar slots
-    const weaponSlot = document.getElementById('ar-slot-weapon');
-    const accessorySlot = document.getElementById('ar-slot-accessory');
-    const healingSlot = document.getElementById('ar-slot-healing');
-
-    if (weaponSlot) {
-        // Mão aberta (✋) quando sem arma = modo coleta
-        weaponSlot.querySelector('span').textContent = GameData.equipped.weapon?.icon || '✋';
-    }
-    if (accessorySlot) {
-        accessorySlot.querySelector('span').textContent = GameData.equipped.accessory?.icon || '➖';
-    }
-    if (healingSlot) {
-        healingSlot.querySelector('span').textContent = GameData.equipped.healing?.icon || '➖';
-    }
+    // Os slots agora usam imagens PNG fixas (inventario-armas.png, etc.)
+    // Não precisamos atualizar os ícones dos slots
 
     // Atualizar imagem da arma equipada (estilo FPS)
     updateWeaponImage();
