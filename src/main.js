@@ -21,12 +21,12 @@ const GameData = {
 
     inventory: {
         weapons: [
-            { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [], image: null },
-            { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
-            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
-            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
-            { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'], image: null },
-            { id: 'salt', name: 'Sal', icon: '🧂', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
+            { id: 'hand', name: 'Mão', icon: '🤛', iconPath: '/images/icon-mao.png', quantity: 1, damage: 5, weakness: [], image: '/images/bg-mao.png', canCollect: true },
+            { id: 'shotgun', name: 'Espingarda', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
+            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', iconPath: '/images/icon-ferro.png', quantity: 3, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
+            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', iconPath: '/images/icon-faca.png', quantity: 1, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
+            { id: 'holy_water', name: 'Água Benta', icon: '💧', iconPath: '/images/icon-agua-benta.png', quantity: 5, damage: 35, weakness: ['demon'], image: null },
+            { id: 'salt', name: 'Sal', icon: '🧂', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
         ],
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
@@ -59,7 +59,7 @@ const GameData = {
     currentScreen: 'splash'
 };
 
-// Inicializar com punho equipado
+// Inicializar com mão equipada
 GameData.equipped.weapon = GameData.inventory.weapons[0];
 
 // ============================================
@@ -177,8 +177,14 @@ function renderInventoryFull() {
 
         const el = document.createElement('div');
         el.className = `inv-item ${isEquipped ? 'equipped' : ''}`;
+
+        // Usar iconPath (imagem PNG) se disponível, senão usar emoji
+        const iconHtml = item.iconPath
+            ? `<img class="inv-item-icon-img" src="${item.iconPath}" alt="${item.name}">`
+            : `<span class="inv-item-icon">${item.icon}</span>`;
+
         el.innerHTML = `
-      <span class="inv-item-icon">${item.icon}</span>
+      ${iconHtml}
       <span class="inv-item-name">${item.name}</span>
     `;
         el.addEventListener('click', () => equipItemFull(item.id, GameData.currentTab));
@@ -483,12 +489,15 @@ AFRAME.registerSystem('combat', {
 
         this.raycaster.set(cameraPosition, cameraDirection);
 
-        // Se não tem arma (mão vazia), tenta coletar loot
+        // Se não tem arma equipada, só tenta coletar loot
         if (!weapon) {
             return this.tryCollectLoot();
         }
 
-        // Com arma, tenta atacar monstros
+        // Verificar se a arma pode coletar (mão)
+        const canCollect = weapon.canCollect === true;
+
+        // Com arma, tenta atacar monstros primeiro
         const meshes = [];
         this.monsters.forEach(monster => {
             // Ignorar fantasmas invisíveis (precisam da filmadora)
@@ -499,33 +508,36 @@ AFRAME.registerSystem('combat', {
             if (mesh) meshes.push(mesh);
         });
 
-        if (meshes.length === 0) {
-            // Se não tem monstros, tenta coletar loot mesmo com arma
-            return this.tryCollectLoot();
+        // Se tem monstros, tenta atacar
+        if (meshes.length > 0) {
+            const intersects = this.raycaster.intersectObjects(meshes, true);
+
+            if (intersects.length > 0) {
+                const hitObject = intersects[0];
+                const monsterEl = this.findMonsterFromMesh(hitObject.object);
+
+                if (monsterEl) {
+                    const monsterComponent = monsterEl.components['ar-monster'];
+                    const result = monsterComponent.takeDamage(weapon.damage, weapon.id);
+
+                    if (navigator.vibrate) {
+                        navigator.vibrate(result.isWeakness ? [100, 50, 100] : [50, 30, 50]);
+                    }
+
+                    return {
+                        hit: true,
+                        monster: monsterComponent.data.type,
+                        damage: result.damage,
+                        isWeakness: result.isWeakness,
+                        remainingHp: result.remainingHp
+                    };
+                }
+            }
         }
 
-        const intersects = this.raycaster.intersectObjects(meshes, true);
-
-        if (intersects.length > 0) {
-            const hitObject = intersects[0];
-            const monsterEl = this.findMonsterFromMesh(hitObject.object);
-
-            if (monsterEl) {
-                const monsterComponent = monsterEl.components['ar-monster'];
-                const result = monsterComponent.takeDamage(weapon.damage, weapon.id);
-
-                if (navigator.vibrate) {
-                    navigator.vibrate(result.isWeakness ? [100, 50, 100] : [50, 30, 50]);
-                }
-
-                return {
-                    hit: true,
-                    monster: monsterComponent.data.type,
-                    damage: result.damage,
-                    isWeakness: result.isWeakness,
-                    remainingHp: result.remainingHp
-                };
-            }
+        // Se a arma pode coletar (mão), tenta coletar loot
+        if (canCollect) {
+            return this.tryCollectLoot();
         }
 
         return { hit: false, reason: 'missed' };

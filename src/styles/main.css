@@ -461,6 +461,13 @@ input {
   margin-bottom: 4px;
 }
 
+.inv-item-icon-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
 .inv-item-name {
   font-size: 10px;
   color: #888;
