@@ -1299,3 +1299,175 @@ input {
 .a-enter-ar-button {
   display: none !important;
 }
+
+/* ========================================
+   WEAPON FIRE ANIMATIONS
+   ======================================== */
+
+/* Base transition para animações suaves */
+.ar-weapon-image img {
+  transition: transform 0.15s ease-out;
+}
+
+/* Animação de DISPARO (Recuo) */
+.ar-weapon-image.firing img {
+  animation: weaponFire 0.6s ease-out forwards;
+}
+
+@keyframes weaponFire {
+  /* Recuo inicial - arma vai pra trás e pra cima */
+  0% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  10% {
+    transform: scale(1.5) translateY(-30px) translateX(5px) rotate(-5deg);
+  }
+  /* Volta para posição */
+  30% {
+    transform: scale(1.5) translateY(-10px) translateX(2px) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  /* Posição final */
+  100% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+}
+
+/* Animação de RECARGA - Pump Action */
+.ar-weapon-image.reloading img {
+  animation: weaponReload 0.8s ease-in-out forwards;
+}
+
+@keyframes weaponReload {
+  /* Início - posição normal */
+  0% {
+    transform: scale(1.5) translateY(0) translateX(0);
+  }
+  /* Puxar pump para trás (mão puxa) */
+  15% {
+    transform: scale(1.5) translateY(15px) translateX(-10px);
+  }
+  30% {
+    transform: scale(1.5) translateY(25px) translateX(-15px);
+  }
+  /* Segurar brevemente */
+  45% {
+    transform: scale(1.5) translateY(25px) translateX(-15px);
+  }
+  /* Empurrar pump de volta */
+  60% {
+    transform: scale(1.5) translateY(10px) translateX(-5px);
+  }
+  75% {
+    transform: scale(1.5) translateY(0) translateX(0);
+  }
+  /* Pequeno ajuste final */
+  100% {
+    transform: scale(1.5) translateY(0) translateX(0);
+  }
+}
+
+/* Animação COMPLETA de disparo + recarga (para espingarda) */
+.ar-weapon-image.fire-and-reload img {
+  animation: weaponFireAndReload 1.2s ease-out forwards;
+}
+
+@keyframes weaponFireAndReload {
+  /* === FASE 1: RECUO DO DISPARO === */
+  0% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  /* Recuo forte */
+  8% {
+    transform: scale(1.5) translateY(-35px) translateX(8px) rotate(-6deg);
+  }
+  /* Volta parcial */
+  20% {
+    transform: scale(1.5) translateY(-10px) translateX(2px) rotate(-1deg);
+  }
+  /* Posição estável pós-disparo */
+  30% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  
+  /* === FASE 2: RECARGA PUMP === */
+  /* Pequena pausa */
+  35% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  /* Puxar pump */
+  50% {
+    transform: scale(1.5) translateY(20px) translateX(-12px) rotate(2deg);
+  }
+  /* Pump no máximo */
+  60% {
+    transform: scale(1.5) translateY(30px) translateX(-18px) rotate(3deg);
+  }
+  /* Empurrar pump de volta */
+  75% {
+    transform: scale(1.5) translateY(10px) translateX(-5px) rotate(1deg);
+  }
+  /* Posição final */
+  90% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    transform: scale(1.5) translateY(0) translateX(0) rotate(0deg);
+  }
+}
+
+/* Flash de luz do disparo */
+.ar-weapon-image.firing::before,
+.ar-weapon-image.fire-and-reload::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255, 200, 50, 0.9) 0%, rgba(255, 100, 0, 0.6) 40%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: muzzleFlash 0.15s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes muzzleFlash {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+/* Efeito de tela tremendo (opcional) */
+.ar-hud.screen-shake {
+  animation: screenShake 0.2s ease-out;
+}
+
+@keyframes screenShake {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-3px, 2px);
+  }
+  40% {
+    transform: translate(3px, -2px);
+  }
+  60% {
+    transform: translate(-2px, 3px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+}

@@ -924,6 +924,47 @@ function showHitFeedback(hit, damage = 0, isWeakness = false) {
     }, 300);
 }
 
+/**
+ * Reproduzir animação de disparo da arma
+ * @param {string} weaponId - ID da arma equipada
+ */
+function playWeaponAnimation(weaponId) {
+    const weaponContainer = document.getElementById('ar-weapon-image');
+    const arHud = document.getElementById('ar-hud');
+
+    if (!weaponContainer) return;
+
+    // Remove classes de animação anteriores
+    weaponContainer.classList.remove('firing', 'reloading', 'fire-and-reload');
+
+    // Para espingarda: animação completa com recuo + recarga pump
+    // Para outras armas: apenas recuo simples
+    const isShotgun = weaponId === 'shotgun';
+    const animationClass = isShotgun ? 'fire-and-reload' : 'firing';
+    const animationDuration = isShotgun ? 1200 : 600; // ms
+
+    // Força reflow para reiniciar a animação
+    void weaponContainer.offsetWidth;
+
+    // Adiciona a classe de animação
+    weaponContainer.classList.add(animationClass);
+
+    // Efeito de screen shake (tela tremendo)
+    if (arHud) {
+        arHud.classList.add('screen-shake');
+        setTimeout(() => {
+            arHud.classList.remove('screen-shake');
+        }, 200);
+    }
+
+    // Remove a classe após a animação terminar
+    setTimeout(() => {
+        weaponContainer.classList.remove(animationClass);
+    }, animationDuration);
+
+    console.log(`🔫 Animação de ${isShotgun ? 'espingarda (disparo + pump)' : 'arma (recuo)'} reproduzida`);
+}
+
 function addDiaryEntry(text) {
     const entry = {
         date: new Date().toLocaleString('pt-BR'),
@@ -1654,6 +1695,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ar-fire')?.addEventListener('click', () => {
         const scene = document.getElementById('ar-scene');
         const combat = scene?.systems['combat'];
+        const weapon = GameData.equipped.weapon;
+
+        // Reproduzir animação da arma (se tiver arma equipada)
+        if (weapon) {
+            playWeaponAnimation(weapon.id);
+        }
+
         if (combat) {
             const result = combat.fire();
             showHitFeedback(result.hit, result.damage, result.isWeakness);
