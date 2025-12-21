@@ -23,8 +23,8 @@ const GameData = {
         weapons: [
             { id: 'fist', name: 'Punho', icon: '🤛', quantity: 1, damage: 5, weakness: [], image: null },
             { id: 'shotgun', name: 'Espingarda', icon: '🔫', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
-            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'], image: null },
-            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'], image: null },
+            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', quantity: 3, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
+            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', quantity: 1, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
             { id: 'holy_water', name: 'Água Benta', icon: '💧', quantity: 5, damage: 35, weakness: ['demon'], image: null },
             { id: 'salt', name: 'Sal', icon: '🧂', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
         ],
