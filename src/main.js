@@ -26,7 +26,10 @@ const GameData = {
             { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', iconPath: '/images/icon-ferro.png', quantity: 3, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
             { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', iconPath: '/images/icon-faca.png', quantity: 1, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
             { id: 'holy_water', name: 'Água Benta', icon: '💧', iconPath: '/images/icon-agua-benta.png', quantity: 5, damage: 35, weakness: ['demon'], image: null },
-            { id: 'salt', name: 'Sal', icon: '🧂', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
+            { id: 'salt', name: 'Sal', icon: '🧂', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
+            { id: 'colt', name: 'Colt', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 45, weakness: ['demon', 'vampire'], image: null },
+            { id: 'knife', name: 'Faca', icon: '🔪', iconPath: '/images/icon-faca.png', quantity: 0, damage: 30, weakness: ['werewolf'], image: null },
+            { id: 'shotgun_loot', name: 'Espingarda', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' }
         ],
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
@@ -131,7 +134,10 @@ const PRELOAD_RESOURCES = {
         '/ghost.glb',
         '/demon.glb',
         '/holy-water.glb',
-        '/salt.glb'
+        '/salt.glb',
+        '/colt.glb',
+        '/knife.glb',
+        '/shotgun.glb'
     ]
 };
 
@@ -475,8 +481,16 @@ AFRAME.registerComponent('ar-monster', {
             demon: '#demon-model'
         };
 
+        // Mapa de escalas para cada monstro
+        const scaleMap = {
+            werewolf: '2 2 2',
+            vampire: '1 1 1',
+            ghost: '2 2 2',
+            demon: '2 2 2'
+        };
+
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
-        this.el.setAttribute('scale', '1 1 1');
+        this.el.setAttribute('scale', scaleMap[this.data.type] || '1 1 1');
         // Monstros não ficam mais rodando - removida animação de rotação
 
         // Fantasmas começam invisíveis - precisam da Filmadora para serem vistos
@@ -487,13 +501,55 @@ AFRAME.registerComponent('ar-monster', {
             if (!hasCamera) {
                 this.el.classList.add('ghost-hidden');
             }
-            console.log(`👻 Fantasma spawnado - Visível: ${hasCamera}`);
+
+            // Configurar movimento circular e levitação para o fantasma
+            this.ghostOrbitAngle = Math.random() * Math.PI * 2; // Ângulo inicial aleatório
+            this.ghostOrbitSpeed = 0.3 + Math.random() * 0.2; // Velocidade de órbita
+            this.ghostHoverOffset = 0; // Offset para levitação
+            this.ghostOrbitRadius = 2 + Math.random(); // Raio da órbita
+
+            // Animação de levitação suave (balanço vertical)
+            const pos = this.el.getAttribute('position');
+            this.ghostBaseY = pos.y + 0.5; // Flutuar acima do chão
+            this.el.setAttribute('position', { x: pos.x, y: this.ghostBaseY, z: pos.z });
+
+            console.log(`👻 Fantasma spawnado - Visível: ${hasCamera} - Com movimento orbital`);
         }
 
         const combatSystem = this.el.sceneEl.systems['combat'];
         if (combatSystem) {
             combatSystem.registerMonster(this.el);
         }
+    },
+
+    tick: function (time, deltaTime) {
+        // Movimento circular e levitação apenas para fantasmas
+        if (this.data.type !== 'ghost') return;
+        if (!deltaTime) return;
+
+        const dt = deltaTime / 1000; // Converter para segundos
+        const camera = document.getElementById('camera');
+        if (!camera) return;
+
+        const cameraPos = camera.getAttribute('position');
+
+        // Atualizar ângulo de órbita
+        this.ghostOrbitAngle += this.ghostOrbitSpeed * dt;
+
+        // Calcular nova posição orbital ao redor do jogador
+        const newX = cameraPos.x + Math.cos(this.ghostOrbitAngle) * this.ghostOrbitRadius;
+        const newZ = cameraPos.z + Math.sin(this.ghostOrbitAngle) * this.ghostOrbitRadius;
+
+        // Efeito de levitação (subir e descer suavemente)
+        this.ghostHoverOffset += dt * 2;
+        const hoverY = this.ghostBaseY + Math.sin(this.ghostHoverOffset) * 0.3;
+
+        // Aplicar nova posição
+        this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
+
+        // Fazer o fantasma olhar para o jogador
+        const angleToPlayer = Math.atan2(cameraPos.x - newX, cameraPos.z - newZ) * (180 / Math.PI);
+        this.el.setAttribute('rotation', { x: 0, y: angleToPlayer, z: 0 });
     },
 
     takeDamage: function (amount, weaponId) {
@@ -830,8 +886,11 @@ AFRAME.registerSystem('monster-spawner', {
 
         // Tipos de loot possíveis - apenas itens com modelos 3D
         const lootTypes = [
-            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35, model: 'holy-water-model' },
-            { id: 'salt', icon: '🧂', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model' }
+            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
+            { id: 'salt', icon: '🧂', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
+            { id: 'colt', icon: '🔫', name: 'Colt', category: 'weapons', damage: 45, model: 'colt-model', scale: '0.8 0.8 0.8' },
+            { id: 'knife', icon: '🔪', name: 'Faca', category: 'weapons', damage: 30, model: 'knife-model', scale: '0.6 0.6 0.6' },
+            { id: 'shotgun_loot', icon: '🔫', name: 'Espingarda', category: 'weapons', damage: 30, model: 'shotgun-model', scale: '0.5 0.5 0.5' }
         ];
 
         const loot = lootTypes[Math.floor(Math.random() * lootTypes.length)];
@@ -881,15 +940,16 @@ AFRAME.registerComponent('ar-loot', {
         category: { type: 'string', default: 'weapons' },
         healAmount: { type: 'number', default: 0 },
         damage: { type: 'number', default: 0 },
-        model: { type: 'string', default: 'holy-water-model' }
+        model: { type: 'string', default: 'holy-water-model' },
+        scale: { type: 'string', default: '0.6 0.6 0.6' }
     },
 
     init: function () {
         // Carregar modelo 3D do loot
         this.el.setAttribute('gltf-model', `#${this.data.model}`);
 
-        // Escala apropriada para os itens (dobro do anterior)
-        this.el.setAttribute('scale', '0.6 0.6 0.6');
+        // Escala personalizada para cada item
+        this.el.setAttribute('scale', this.data.scale);
 
         // Animação de flutuação
         const pos = this.el.getAttribute('position');
