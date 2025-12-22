@@ -265,7 +265,8 @@ function renderInventoryFull() {
 
     switch (GameData.currentTab) {
         case 'weapons':
-            items = GameData.inventory.weapons;
+            // Filtrar apenas armas com quantity > 0 (coletadas)
+            items = GameData.inventory.weapons.filter(w => w.quantity > 0);
             equippedItem = GameData.equipped.weapon;
             break;
         case 'accessories':
@@ -1003,22 +1004,26 @@ AFRAME.registerComponent('ar-loot', {
             if (item) {
                 item.quantity++;
                 added = true;
+                console.log(`✅ Adicionado ao inventário healing: ${item.name} (qty: ${item.quantity})`);
             }
         } else if (category === 'weapons') {
             const item = GameData.inventory.weapons.find(i => i.id === this.data.id);
             if (item) {
                 item.quantity++;
                 added = true;
+                console.log(`✅ Adicionado ao inventário weapons: ${item.name} (qty: ${item.quantity})`);
+            } else {
+                console.log(`❌ Item não encontrado no inventário: ${this.data.id}`);
             }
         }
 
         if (added) {
             GameData.player.itemsCollected++;
 
-            // Feedback visual
+            // Feedback visual - mostrar nome do item
             const feedback = document.getElementById('ar-hit-feedback');
             if (feedback) {
-                feedback.textContent = `+1 ${this.data.icon}`;
+                feedback.textContent = `+1 ${this.data.name}`;
                 feedback.style.color = '#ffcc00';
                 feedback.className = 'ar-hit-feedback hit';
                 setTimeout(() => {
