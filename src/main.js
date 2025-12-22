@@ -21,15 +21,15 @@ const GameData = {
 
     inventory: {
         weapons: [
-            { id: 'hand', name: 'Mão', icon: '🤛', iconPath: '/images/icon-mao.png', quantity: 1, damage: 5, weakness: [], image: '/images/bg-mao.png', canCollect: true },
-            { id: 'shotgun', name: 'Espingarda', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 1, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
-            { id: 'iron_bar', name: 'Barra de Ferro', icon: '🔩', iconPath: '/images/icon-ferro.png', quantity: 3, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
-            { id: 'silver_knife', name: 'Faca de Prata', icon: '🔪', iconPath: '/images/icon-faca.png', quantity: 1, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
-            { id: 'holy_water', name: 'Água Benta', icon: '💧', iconPath: '/images/icon-agua-benta.png', quantity: 5, damage: 35, weakness: ['demon'], image: null },
-            { id: 'salt', name: 'Sal', icon: '🧂', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
-            { id: 'colt', name: 'Colt', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 45, weakness: ['demon', 'vampire'], image: null },
-            { id: 'knife', name: 'Faca', icon: '🔪', iconPath: '/images/icon-faca.png', quantity: 0, damage: 30, weakness: ['werewolf'], image: null },
-            { id: 'shotgun_loot', name: 'Espingarda', icon: '🔫', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' }
+            { id: 'hand', name: 'Mão', icon: '', iconPath: '/images/icon-mao.png', quantity: 1, damage: 5, weakness: [], image: '/images/bg-mao.png', canCollect: true },
+            { id: 'shotgun', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
+            { id: 'iron_bar', name: 'Barra de Ferro', icon: '', iconPath: '/images/icon-ferro.png', quantity: 0, damage: 25, weakness: ['ghost'], image: '/images/bg-ferro.png' },
+            { id: 'silver_knife', name: 'Faca de Prata', icon: '', iconPath: '/images/icon-faca.png', quantity: 0, damage: 40, weakness: ['werewolf'], image: '/images/bg-faca.png' },
+            { id: 'holy_water', name: 'Água Benta', icon: '', iconPath: '/images/icon-agua-benta.png', quantity: 0, damage: 35, weakness: ['demon'], image: null },
+            { id: 'salt', name: 'Sal', icon: '', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
+            { id: 'colt', name: 'Colt', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 45, weakness: ['demon', 'vampire'], image: null },
+            { id: 'knife', name: 'Faca', icon: '', iconPath: '/images/icon-faca.png', quantity: 0, damage: 30, weakness: ['werewolf'], image: null },
+            { id: 'shotgun_loot', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 30, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' }
         ],
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
@@ -885,15 +885,27 @@ AFRAME.registerSystem('monster-spawner', {
         const position = this.getSpawnPosition();
 
         // Tipos de loot possíveis - apenas itens com modelos 3D
-        const lootTypes = [
-            { id: 'holy_water', icon: '💧', name: 'Água Benta', category: 'weapons', damage: 35, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
-            { id: 'salt', icon: '🧂', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
-            { id: 'colt', icon: '🔫', name: 'Colt', category: 'weapons', damage: 45, model: 'colt-model', scale: '0.8 0.8 0.8' },
-            { id: 'knife', icon: '🔪', name: 'Faca', category: 'weapons', damage: 30, model: 'knife-model', scale: '0.6 0.6 0.6' },
-            { id: 'shotgun_loot', icon: '🔫', name: 'Espingarda', category: 'weapons', damage: 30, model: 'shotgun-model', scale: '0.5 0.5 0.5' }
+        const allLootTypes = [
+            { id: 'holy_water', icon: '', name: 'Água Benta', category: 'weapons', damage: 35, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
+            { id: 'salt', icon: '', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
+            { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 45, model: 'colt-model', scale: '0.2 0.2 0.2' },
+            { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 30, model: 'knife-model', scale: '0.6 0.6 0.6' },
+            { id: 'shotgun_loot', icon: '', name: 'Espingarda', category: 'weapons', damage: 30, model: 'shotgun-model', scale: '0.5 0.5 0.5' }
         ];
 
-        const loot = lootTypes[Math.floor(Math.random() * lootTypes.length)];
+        // Filtrar itens que o jogador já coletou (quantity > 0)
+        const availableLoot = allLootTypes.filter(loot => {
+            const inventoryItem = GameData.inventory.weapons.find(w => w.id === loot.id);
+            return !inventoryItem || inventoryItem.quantity === 0;
+        });
+
+        // Se não há loot disponível, não spawna nada
+        if (availableLoot.length === 0) {
+            console.log('📦 Todos os itens já foram coletados!');
+            return null;
+        }
+
+        const loot = availableLoot[Math.floor(Math.random() * availableLoot.length)];
 
         const entity = document.createElement('a-entity');
         entity.setAttribute('ar-loot', loot);
