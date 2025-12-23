@@ -1666,7 +1666,8 @@ function openARInventory(slotType) {
 
     switch (slotType) {
         case 'weapon':
-            items = GameData.inventory.weapons.filter(w => w.id !== 'fist');
+            // Filtrar armas com quantity > 0 (coletadas)
+            items = GameData.inventory.weapons.filter(w => w.quantity > 0);
             equippedItem = GameData.equipped.weapon;
             noneIcon = '✋';
             noneLabel = 'Coletar';
@@ -1703,11 +1704,16 @@ function openARInventory(slotType) {
         const el = document.createElement('div');
         el.className = `ar-inv-item ${isEquipped ? 'equipped' : ''}`;
 
+        // Usar iconPath (imagem PNG) se disponível, senão usar emoji
+        const iconHtml = item.iconPath
+            ? `<img src="${item.iconPath}" alt="${item.name}" style="width:32px;height:32px;object-fit:contain;">`
+            : `<span>${item.icon}</span>`;
+
         // Para cura, mostrar quantidade
         if (slotType === 'healing') {
-            el.innerHTML = `<span>${item.icon}</span><small style="font-size:8px;color:#888;">x${item.quantity}</small>`;
+            el.innerHTML = `${iconHtml}<small style="font-size:8px;color:#888;">x${item.quantity}</small>`;
         } else {
-            el.innerHTML = `<span>${item.icon}</span>`;
+            el.innerHTML = iconHtml;
         }
 
         el.addEventListener('click', () => {
