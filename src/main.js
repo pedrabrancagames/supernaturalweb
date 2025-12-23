@@ -37,8 +37,8 @@ const GameData = {
             { id: 'lighter', name: 'Isqueiro', icon: '', iconPath: '/images/icon-isqueiro.png', quantity: 0, damage: 0, weakness: ['wendigo'], image: '/images/bg-isqueiro.png', special: 'ignite' }
         ],
         accessories: [
-            { id: 'camera', name: 'Filmadora', icon: '📹', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_ghost' },
-            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_messages' },
+            { id: 'camera', name: 'Filmadora', icon: '📹', iconPath: '/images/icon-camera.png', quantity: 1, effect: 'reveal_ghost' },
+            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', iconPath: '/images/icon-lanterna.png', quantity: 1, effect: 'reveal_messages' },
             { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'detect_nearby' }
         ],
         healing: [
