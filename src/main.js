@@ -39,7 +39,7 @@ const GameData = {
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', iconPath: '/images/icon-camera.png', quantity: 1, effect: 'reveal_ghost' },
             { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', iconPath: '/images/icon-lanterna.png', quantity: 1, effect: 'reveal_messages' },
-            { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'detect_nearby' }
+            { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-emf.png', quantity: 1, effect: 'detect_nearby' }
         ],
         healing: [
             { id: 'bandage', name: 'Bandagem', icon: '🩹', quantity: 5, healAmount: 20 },
