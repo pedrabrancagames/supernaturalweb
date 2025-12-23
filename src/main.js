@@ -23,7 +23,7 @@ const GameData = {
         weapons: [
             { id: 'hand', name: 'Mão', icon: '', iconPath: '/images/icon-mao.png', quantity: 1, damage: 5, weakness: [], image: '/images/bg-mao.png', canCollect: true },
             { id: 'shotgun', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 20, weakness: ['ghost'], image: '/images/bg-espingarda.png', ammo: 'salt' },
-            { id: 'holy_water', name: 'Água Benta', icon: '', iconPath: '/images/icon-agua-benta.png', quantity: 0, damage: 10, weakness: ['demon'], image: null },
+            { id: 'holy_water', name: 'Água Benta', icon: '', iconPath: '/images/icon-agua-benta.png', quantity: 0, damage: 10, weakness: ['demon'], image: '/images/bg-agua-benta.png' },
             { id: 'knife', name: 'Faca', icon: '', iconPath: '/images/icon-faca.png', quantity: 0, damage: 15, weakness: ['werewolf'], image: '/images/bg-faca.png' },
             { id: 'salt', name: 'Sal', icon: '', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
             { id: 'crowbar', name: 'Barra de Ferro', icon: '', iconPath: '/images/icon-ferro.png', quantity: 0, damage: 30, weakness: ['ghost'], image: '/images/bg-ferro.png' },
@@ -31,7 +31,7 @@ const GameData = {
             { id: 'devil_trap', name: 'Selo da Armadilha', icon: '', iconPath: '/images/icon-selo.png', quantity: 0, damage: 0, weakness: ['demon'], image: '/images/bg-pentagrama.png', special: 'trap' },
             { id: 'bible', name: 'Bíblia', icon: '', iconPath: '/images/icon-blibia.png', quantity: 0, damage: 100, weakness: ['demon'], image: '/images/bg-biblia.png', special: 'exorcism' },
             { id: 'angel_blade', name: 'Lâmina de Anjo', icon: '', iconPath: '/images/icon-lamina-anjo.png', quantity: 0, damage: 80, weakness: ['demon', 'hellhound'], image: '/images/bg-faca-anjo.png' },
-            { id: 'blood_knife', name: 'Faca com Sangue', icon: '', iconPath: '/images/icon-faca-morto.png', quantity: 0, damage: 40, weakness: ['vampire'], image: '/images/bg-faca.png' },
+            { id: 'blood_knife', name: 'Faca com Sangue', icon: '', iconPath: '/images/icon-faca-morto.png', quantity: 0, damage: 40, weakness: ['vampire'], image: '/images/bg-faca-morto.png' },
             { id: 'wooden_stake', name: 'Estaca de Madeira', icon: '', iconPath: '/images/icon-estaca.png', quantity: 0, damage: 100, weakness: ['vampire'], image: '/images/bg-estaca.png', special: 'finisher' },
             { id: 'molotov', name: 'Coquetel Molotov', icon: '', iconPath: '/images/icon-inflamavel.png', quantity: 0, damage: 60, weakness: ['wendigo'], image: '/images/bg-molotov.png' },
             { id: 'lighter', name: 'Isqueiro', icon: '', iconPath: '/images/icon-isqueiro.png', quantity: 0, damage: 0, weakness: ['wendigo'], image: '/images/bg-isqueiro.png', special: 'ignite' }
@@ -130,6 +130,8 @@ const PRELOAD_RESOURCES = {
         '/images/bg-estaca.png',
         '/images/bg-molotov.png',
         '/images/bg-isqueiro.png',
+        '/images/bg-agua-benta.png',
+        '/images/bg-faca-morto.png',
         '/images/icon-agua-benta.png',
         '/images/icon-espingarda.png',
         '/images/icon-faca.png',
