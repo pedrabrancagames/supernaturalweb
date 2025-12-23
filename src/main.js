@@ -22,12 +22,12 @@ const GameData = {
     inventory: {
         weapons: [
             { id: 'hand', name: 'Mão', icon: '', iconPath: '/images/icon-mao.png', quantity: 1, damage: 5, weakness: [], image: '/images/bg-mao.png', canCollect: true },
-            { id: 'shotgun', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 20, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
+            { id: 'shotgun', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 20, weakness: ['ghost'], image: '/images/bg-espingarda.png', ammo: 'salt' },
             { id: 'holy_water', name: 'Água Benta', icon: '', iconPath: '/images/icon-agua-benta.png', quantity: 0, damage: 10, weakness: ['demon'], image: null },
             { id: 'knife', name: 'Faca', icon: '', iconPath: '/images/icon-faca.png', quantity: 0, damage: 15, weakness: ['werewolf'], image: '/images/bg-faca.png' },
             { id: 'salt', name: 'Sal', icon: '', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
             { id: 'crowbar', name: 'Barra de Ferro', icon: '', iconPath: '/images/icon-ferro.png', quantity: 0, damage: 30, weakness: ['ghost'], image: '/images/bg-ferro.png' },
-            { id: 'colt', name: 'Colt', icon: '', iconPath: '/images/icon-colt.png', quantity: 0, damage: 50, weakness: ['demon', 'vampire', 'werewolf'], image: '/images/bg-colt.png' },
+            { id: 'colt', name: 'Colt', icon: '', iconPath: '/images/icon-colt.png', quantity: 0, damage: 50, weakness: ['demon', 'vampire', 'werewolf'], image: '/images/bg-colt.png', ammo: 'silver' },
             { id: 'devil_trap', name: 'Selo da Armadilha', icon: '', iconPath: '/images/icon-selo.png', quantity: 0, damage: 0, weakness: ['demon'], image: '/images/bg-pentagrama.png', special: 'trap' },
             { id: 'bible', name: 'Bíblia', icon: '', iconPath: '/images/icon-blibia.png', quantity: 0, damage: 100, weakness: ['demon'], image: '/images/bg-biblia.png', special: 'exorcism' },
             { id: 'angel_blade', name: 'Lâmina de Anjo', icon: '', iconPath: '/images/icon-lamina-anjo.png', quantity: 0, damage: 80, weakness: ['demon', 'hellhound'], image: '/images/bg-faca-anjo.png' },
@@ -39,8 +39,7 @@ const GameData = {
         accessories: [
             { id: 'camera', name: 'Filmadora', icon: '📹', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_ghost' },
             { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_messages' },
-            { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'detect_nearby' },
-            { id: 'silver_bullet', name: 'Bala de Prata', icon: '', iconPath: '/images/icon-bala-prata.png', quantity: 0, effect: 'silver_damage' }
+            { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'detect_nearby' }
         ],
         healing: [
             { id: 'bandage', name: 'Bandagem', icon: '🩹', quantity: 5, healAmount: 20 },
@@ -145,7 +144,6 @@ const PRELOAD_RESOURCES = {
         '/images/icon-estaca.png',
         '/images/icon-inflamavel.png',
         '/images/icon-isqueiro.png',
-        '/images/icon-bala-prata.png',
         '/images/inventario-armas.png',
         '/images/inventario-assessorios.png',
         '/images/inventario-cura.png'
@@ -167,8 +165,7 @@ const PRELOAD_RESOURCES = {
         '/knife-blood.glb',
         '/estaca.glb',
         '/molotov.glb',
-        '/isqueiro.glb',
-        '/silver-bullet.glb'
+        '/isqueiro.glb'
     ]
 };
 
@@ -930,8 +927,7 @@ AFRAME.registerSystem('monster-spawner', {
             { id: 'blood_knife', icon: '', name: 'Faca com Sangue', category: 'weapons', damage: 40, model: 'knife-blood-model', scale: '0.5 0.5 0.5' },
             { id: 'wooden_stake', icon: '', name: 'Estaca de Madeira', category: 'weapons', damage: 100, model: 'estaca-model', scale: '0.6 0.6 0.6' },
             { id: 'molotov', icon: '', name: 'Coquetel Molotov', category: 'weapons', damage: 60, model: 'molotov-model', scale: '0.4 0.4 0.4' },
-            { id: 'lighter', icon: '', name: 'Isqueiro', category: 'weapons', damage: 0, model: 'isqueiro-model', scale: '0.5 0.5 0.5' },
-            { id: 'silver_bullet', icon: '', name: 'Bala de Prata', category: 'accessories', damage: 0, model: 'silver-bullet-model', scale: '0.5 0.5 0.5' }
+            { id: 'lighter', icon: '', name: 'Isqueiro', category: 'weapons', damage: 0, model: 'isqueiro-model', scale: '0.5 0.5 0.5' }
         ];
 
         // Filtrar itens que o jogador já coletou (quantity > 0)
