@@ -922,7 +922,7 @@ AFRAME.registerSystem('monster-spawner', {
             { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '0.5 0.5 0.5' },
             { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 50, model: 'colt-model', scale: '0.3 0.3 0.3' },
             { id: 'devil_trap', icon: '', name: 'Selo da Armadilha', category: 'weapons', damage: 0, model: 'selo-model', scale: '0.5 0.5 0.5' },
-            { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '0.4 0.4 0.4' },
+            { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '0.1 0.1 0.1' },
             { id: 'angel_blade', icon: '', name: 'Lâmina de Anjo', category: 'weapons', damage: 80, model: 'knife-angel-model', scale: '0.4 0.4 0.4' },
             { id: 'blood_knife', icon: '', name: 'Faca com Sangue', category: 'weapons', damage: 40, model: 'knife-blood-model', scale: '0.5 0.5 0.5' },
             { id: 'wooden_stake', icon: '', name: 'Estaca de Madeira', category: 'weapons', damage: 100, model: 'estaca-model', scale: '0.6 0.6 0.6' },
