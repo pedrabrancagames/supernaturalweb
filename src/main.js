@@ -25,12 +25,22 @@ const GameData = {
             { id: 'shotgun', name: 'Espingarda', icon: '', iconPath: '/images/icon-espingarda.png', quantity: 0, damage: 20, weakness: ['vampire', 'werewolf'], image: '/images/bg-espingarda.png' },
             { id: 'holy_water', name: 'Água Benta', icon: '', iconPath: '/images/icon-agua-benta.png', quantity: 0, damage: 10, weakness: ['demon'], image: null },
             { id: 'knife', name: 'Faca', icon: '', iconPath: '/images/icon-faca.png', quantity: 0, damage: 15, weakness: ['werewolf'], image: '/images/bg-faca.png' },
-            { id: 'salt', name: 'Sal', icon: '', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null }
+            { id: 'salt', name: 'Sal', icon: '', iconPath: '/images/icon-sal.png', quantity: 0, damage: 25, weakness: ['ghost', 'demon'], image: null },
+            { id: 'crowbar', name: 'Barra de Ferro', icon: '', iconPath: '/images/icon-ferro.png', quantity: 0, damage: 30, weakness: ['ghost'], image: '/images/bg-ferro.png' },
+            { id: 'colt', name: 'Colt', icon: '', iconPath: '/images/icon-colt.png', quantity: 0, damage: 50, weakness: ['demon', 'vampire', 'werewolf'], image: '/images/bg-colt.png' },
+            { id: 'devil_trap', name: 'Selo da Armadilha', icon: '', iconPath: '/images/icon-selo.png', quantity: 0, damage: 0, weakness: ['demon'], image: '/images/bg-pentagrama.png', special: 'trap' },
+            { id: 'bible', name: 'Bíblia', icon: '', iconPath: '/images/icon-blibia.png', quantity: 0, damage: 100, weakness: ['demon'], image: '/images/bg-biblia.png', special: 'exorcism' },
+            { id: 'angel_blade', name: 'Lâmina de Anjo', icon: '', iconPath: '/images/icon-lamina-anjo.png', quantity: 0, damage: 80, weakness: ['demon', 'hellhound'], image: '/images/bg-faca-anjo.png' },
+            { id: 'blood_knife', name: 'Faca com Sangue', icon: '', iconPath: '/images/icon-faca-morto.png', quantity: 0, damage: 40, weakness: ['vampire'], image: '/images/bg-faca.png' },
+            { id: 'wooden_stake', name: 'Estaca de Madeira', icon: '', iconPath: '/images/icon-estaca.png', quantity: 0, damage: 100, weakness: ['vampire'], image: '/images/bg-estaca.png', special: 'finisher' },
+            { id: 'molotov', name: 'Coquetel Molotov', icon: '', iconPath: '/images/icon-inflamavel.png', quantity: 0, damage: 60, weakness: ['wendigo'], image: '/images/bg-molotov.png' },
+            { id: 'lighter', name: 'Isqueiro', icon: '', iconPath: '/images/icon-isqueiro.png', quantity: 0, damage: 0, weakness: ['wendigo'], image: '/images/bg-isqueiro.png', special: 'ignite' }
         ],
         accessories: [
-            { id: 'camera', name: 'Filmadora', icon: '📹', quantity: 1, effect: 'reveal_ghost' },
-            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', quantity: 1, effect: 'reveal_messages' },
-            { id: 'emf', name: 'Detector EMF', icon: '📡', quantity: 1, effect: 'detect_nearby' }
+            { id: 'camera', name: 'Filmadora', icon: '📹', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_ghost' },
+            { id: 'uv_light', name: 'Lanterna UV', icon: '🔦', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'reveal_messages' },
+            { id: 'emf', name: 'Detector EMF', icon: '📡', iconPath: '/images/icon-mao.png', quantity: 1, effect: 'detect_nearby' },
+            { id: 'silver_bullet', name: 'Bala de Prata', icon: '', iconPath: '/images/icon-bala-prata.png', quantity: 0, effect: 'silver_damage' }
         ],
         healing: [
             { id: 'bandage', name: 'Bandagem', icon: '🩹', quantity: 5, healAmount: 20 },
@@ -114,12 +124,28 @@ const PRELOAD_RESOURCES = {
         '/images/bg-faca.png',
         '/images/bg-ferro.png',
         '/images/bg-mao.png',
+        '/images/bg-colt.png',
+        '/images/bg-pentagrama.png',
+        '/images/bg-biblia.png',
+        '/images/bg-faca-anjo.png',
+        '/images/bg-estaca.png',
+        '/images/bg-molotov.png',
+        '/images/bg-isqueiro.png',
         '/images/icon-agua-benta.png',
         '/images/icon-espingarda.png',
         '/images/icon-faca.png',
         '/images/icon-ferro.png',
         '/images/icon-mao.png',
         '/images/icon-sal.png',
+        '/images/icon-colt.png',
+        '/images/icon-selo.png',
+        '/images/icon-blibia.png',
+        '/images/icon-lamina-anjo.png',
+        '/images/icon-faca-morto.png',
+        '/images/icon-estaca.png',
+        '/images/icon-inflamavel.png',
+        '/images/icon-isqueiro.png',
+        '/images/icon-bala-prata.png',
         '/images/inventario-armas.png',
         '/images/inventario-assessorios.png',
         '/images/inventario-cura.png'
@@ -132,7 +158,17 @@ const PRELOAD_RESOURCES = {
         '/holy-water.glb',
         '/salt.glb',
         '/knife.glb',
-        '/shotgun.glb'
+        '/shotgun.glb',
+        '/crowbar.glb',
+        '/colt.glb',
+        '/selo.glb',
+        '/bible.glb',
+        '/knife-angel.glb',
+        '/knife-blood.glb',
+        '/estaca.glb',
+        '/molotov.glb',
+        '/isqueiro.glb',
+        '/silver-bullet.glb'
     ]
 };
 
@@ -885,7 +921,17 @@ AFRAME.registerSystem('monster-spawner', {
             { id: 'holy_water', icon: '', name: 'Água Benta', category: 'weapons', damage: 10, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
             { id: 'salt', icon: '', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
             { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 15, model: 'knife-model', scale: '0.6 0.6 0.6' },
-            { id: 'shotgun', icon: '', name: 'Espingarda', category: 'weapons', damage: 20, model: 'shotgun-model', scale: '0.5 0.5 0.5' }
+            { id: 'shotgun', icon: '', name: 'Espingarda', category: 'weapons', damage: 20, model: 'shotgun-model', scale: '0.5 0.5 0.5' },
+            { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '0.5 0.5 0.5' },
+            { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 50, model: 'colt-model', scale: '0.3 0.3 0.3' },
+            { id: 'devil_trap', icon: '', name: 'Selo da Armadilha', category: 'weapons', damage: 0, model: 'selo-model', scale: '0.5 0.5 0.5' },
+            { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '0.4 0.4 0.4' },
+            { id: 'angel_blade', icon: '', name: 'Lâmina de Anjo', category: 'weapons', damage: 80, model: 'knife-angel-model', scale: '0.4 0.4 0.4' },
+            { id: 'blood_knife', icon: '', name: 'Faca com Sangue', category: 'weapons', damage: 40, model: 'knife-blood-model', scale: '0.5 0.5 0.5' },
+            { id: 'wooden_stake', icon: '', name: 'Estaca de Madeira', category: 'weapons', damage: 100, model: 'estaca-model', scale: '0.6 0.6 0.6' },
+            { id: 'molotov', icon: '', name: 'Coquetel Molotov', category: 'weapons', damage: 60, model: 'molotov-model', scale: '0.4 0.4 0.4' },
+            { id: 'lighter', icon: '', name: 'Isqueiro', category: 'weapons', damage: 0, model: 'isqueiro-model', scale: '0.5 0.5 0.5' },
+            { id: 'silver_bullet', icon: '', name: 'Bala de Prata', category: 'accessories', damage: 0, model: 'silver-bullet-model', scale: '0.5 0.5 0.5' }
         ];
 
         // Filtrar itens que o jogador já coletou (quantity > 0)
@@ -1013,7 +1059,16 @@ AFRAME.registerComponent('ar-loot', {
                 added = true;
                 console.log(`✅ Adicionado ao inventário weapons: ${item.name} (qty: ${item.quantity})`);
             } else {
-                console.log(`❌ Item não encontrado no inventário: ${this.data.id}`);
+                console.log(`❌ Item não encontrado no inventário weapons: ${this.data.id}`);
+            }
+        } else if (category === 'accessories') {
+            const item = GameData.inventory.accessories.find(i => i.id === this.data.id);
+            if (item) {
+                item.quantity++;
+                added = true;
+                console.log(`✅ Adicionado ao inventário accessories: ${item.name} (qty: ${item.quantity})`);
+            } else {
+                console.log(`❌ Item não encontrado no inventário accessories: ${this.data.id}`);
             }
         }
 
