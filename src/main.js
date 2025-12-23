@@ -1737,17 +1737,18 @@ function openARInventory(slotType) {
             break;
     }
 
-    // Adicionar opção "Nenhum" primeiro
-    const noneEl = document.createElement('div');
-    const isNoneEquipped = (slotType === 'weapon' && (!equippedItem || equippedItem.id === 'fist')) ||
-        (slotType === 'accessory' && !equippedItem) ||
-        (slotType === 'healing' && !equippedItem);
-    noneEl.className = `ar-inv-item ${isNoneEquipped ? 'equipped' : ''}`;
-    noneEl.innerHTML = `<span>${noneIcon}</span><small style="font-size:8px;color:#888;">${noneLabel}</small>`;
-    noneEl.addEventListener('click', () => {
-        selectNone(slotType);
-    });
-    grid.appendChild(noneEl);
+    // Adicionar opção "Nenhum" primeiro (exceto para armas, pois a mão serve para coletar)
+    if (slotType !== 'weapon') {
+        const noneEl = document.createElement('div');
+        const isNoneEquipped = (slotType === 'accessory' && !equippedItem) ||
+            (slotType === 'healing' && !equippedItem);
+        noneEl.className = `ar-inv-item ${isNoneEquipped ? 'equipped' : ''}`;
+        noneEl.innerHTML = `<span style="font-size:28px;">${noneIcon}</span><small style="font-size:8px;color:#888;">${noneLabel}</small>`;
+        noneEl.addEventListener('click', () => {
+            selectNone(slotType);
+        });
+        grid.appendChild(noneEl);
+    }
 
     // Adicionar itens
     items.forEach(item => {
@@ -1757,8 +1758,8 @@ function openARInventory(slotType) {
 
         // Usar iconPath (imagem PNG) se disponível, senão usar emoji
         const iconHtml = item.iconPath
-            ? `<img src="${item.iconPath}" alt="${item.name}" style="width:32px;height:32px;object-fit:contain;">`
-            : `<span>${item.icon}</span>`;
+            ? `<img src="${item.iconPath}" alt="${item.name}">`
+            : `<span style="font-size:28px;">${item.icon}</span>`;
 
         // Para cura, mostrar quantidade
         if (slotType === 'healing') {
