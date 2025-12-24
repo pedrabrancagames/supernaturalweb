@@ -199,6 +199,136 @@ const GameData = {
 GameData.equipped.weapon = GameData.inventory.weapons[0];
 
 // ============================================
+// PERSISTÊNCIA DE DADOS (LocalStorage)
+// ============================================
+
+const STORAGE_KEY = 'supernaturalAR_save';
+
+/**
+ * Salvar estado do jogo no LocalStorage
+ */
+function saveGame() {
+    try {
+        const saveData = {
+            player: GameData.player,
+            inventory: GameData.inventory,
+            equipped: {
+                weapon: GameData.equipped.weapon?.id || null,
+                accessory: GameData.equipped.accessory?.id || null,
+                healing: GameData.equipped.healing?.id || null
+            },
+            bestiary: GameData.bestiary.map(m => ({
+                id: m.id,
+                status: m.status,
+                encounterCount: m.encounterCount
+            })),
+            diary: GameData.diary,
+            savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+        console.log('💾 Jogo salvo com sucesso!');
+        return true;
+    } catch (error) {
+        console.error('❌ Erro ao salvar jogo:', error);
+        return false;
+    }
+}
+
+/**
+ * Carregar estado do jogo do LocalStorage
+ */
+function loadGame() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+            console.log('📂 Nenhum save encontrado, iniciando novo jogo');
+            return false;
+        }
+
+        const saveData = JSON.parse(saved);
+
+        // Restaurar dados do jogador
+        Object.assign(GameData.player, saveData.player);
+
+        // Restaurar inventário
+        if (saveData.inventory) {
+            // Atualizar quantidades das armas
+            saveData.inventory.weapons?.forEach(savedWeapon => {
+                const weapon = GameData.inventory.weapons.find(w => w.id === savedWeapon.id);
+                if (weapon) weapon.quantity = savedWeapon.quantity;
+            });
+            // Atualizar acessórios
+            saveData.inventory.accessories?.forEach(savedAcc => {
+                const acc = GameData.inventory.accessories.find(a => a.id === savedAcc.id);
+                if (acc) acc.quantity = savedAcc.quantity;
+            });
+            // Atualizar cura
+            saveData.inventory.healing?.forEach(savedHeal => {
+                const heal = GameData.inventory.healing.find(h => h.id === savedHeal.id);
+                if (heal) heal.quantity = savedHeal.quantity;
+            });
+        }
+
+        // Restaurar equipamentos
+        if (saveData.equipped) {
+            GameData.equipped.weapon = GameData.inventory.weapons.find(w => w.id === saveData.equipped.weapon) || GameData.inventory.weapons[0];
+            GameData.equipped.accessory = GameData.inventory.accessories.find(a => a.id === saveData.equipped.accessory) || null;
+            GameData.equipped.healing = GameData.inventory.healing.find(h => h.id === saveData.equipped.healing) || null;
+        }
+
+        // Restaurar bestiário
+        if (saveData.bestiary) {
+            saveData.bestiary.forEach(savedMonster => {
+                const monster = GameData.bestiary.find(m => m.id === savedMonster.id);
+                if (monster) {
+                    monster.status = savedMonster.status;
+                    monster.encounterCount = savedMonster.encounterCount;
+                }
+            });
+        }
+
+        // Restaurar diário
+        if (saveData.diary) {
+            GameData.diary = saveData.diary;
+        }
+
+        console.log(`📂 Jogo carregado! Salvo em: ${new Date(saveData.savedAt).toLocaleString('pt-BR')}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Erro ao carregar jogo:', error);
+        return false;
+    }
+}
+
+/**
+ * Limpar save do jogo
+ */
+function clearSave() {
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('🗑️ Save removido');
+}
+
+/**
+ * Auto-save a cada 30 segundos durante gameplay
+ */
+let autoSaveInterval = null;
+
+function startAutoSave() {
+    if (autoSaveInterval) return;
+    autoSaveInterval = setInterval(() => {
+        saveGame();
+    }, 30000); // 30 segundos
+    console.log('💾 Auto-save ativado (30s)');
+}
+
+function stopAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+        autoSaveInterval = null;
+    }
+}
+
+// ============================================
 // NAVEGAÇÃO
 // ============================================
 
@@ -230,8 +360,13 @@ function goto(screenId) {
             startARMode();
         } else if (screenId === 'map') {
             initFullMap();
+        } else if (screenId === 'diary') {
+            renderDiary();
         }
     }
+
+    // Salvar jogo ao mudar de tela
+    saveGame();
 
     console.log(`📱 Navegou para: ${screenId}`);
 }
@@ -345,9 +480,24 @@ function getFileName(path) {
     return path.split('/').pop();
 }
 
+// Rastreador de erros de carregamento de modelos 3D
+const loadErrors = {
+    images: [],
+    models: []
+};
+
 async function initSplash() {
     const progress = document.getElementById('splash-progress');
     const status = document.getElementById('splash-status');
+
+    // Limpar erros anteriores
+    loadErrors.images = [];
+    loadErrors.models = [];
+
+    // Carregar save antes de iniciar
+    status.textContent = 'Verificando save...';
+    const hasSave = loadGame();
+    await new Promise(r => setTimeout(r, 200));
 
     const allResources = [
         ...PRELOAD_RESOURCES.images.map(src => ({ type: 'image', src })),
@@ -356,32 +506,44 @@ async function initSplash() {
 
     const totalResources = allResources.length;
     let loadedCount = 0;
+    let errorCount = 0;
 
     status.textContent = 'Iniciando carregamento...';
     progress.style.width = '0%';
 
     // Carregar recursos em paralelo, mas atualizar UI sequencialmente
     const loadPromises = allResources.map(async (resource, index) => {
-        // Atualizar status antes de carregar
         const fileName = getFileName(resource.src);
+        let success = true;
 
-        if (resource.type === 'image') {
-            await preloadImage(resource.src);
-        } else {
-            await preloadModel(resource.src);
+        try {
+            if (resource.type === 'image') {
+                await preloadImage(resource.src);
+            } else {
+                await preloadModel(resource.src);
+            }
+        } catch (error) {
+            success = false;
+            errorCount++;
+            if (resource.type === 'image') {
+                loadErrors.images.push({ src: resource.src, error: error.message });
+            } else {
+                loadErrors.models.push({ src: resource.src, error: error.message });
+            }
         }
 
         loadedCount++;
         const progressPercent = Math.round((loadedCount / totalResources) * 90); // Até 90%
 
         progress.style.width = `${progressPercent}%`;
-        status.textContent = `Carregando: ${fileName}`;
+        status.textContent = `Carregando: ${fileName}${!success ? ' ⚠️' : ''}`;
 
-        return resource.src;
+        return { src: resource.src, success };
     });
 
     try {
-        await Promise.all(loadPromises);
+        const results = await Promise.all(loadPromises);
+        const successCount = results.filter(r => r.success).length;
 
         // Etapa final
         progress.style.width = '95%';
@@ -389,10 +551,22 @@ async function initSplash() {
         await new Promise(r => setTimeout(r, 300));
 
         progress.style.width = '100%';
-        status.textContent = 'Pronto!';
+
+        if (errorCount > 0) {
+            status.textContent = `Pronto! (${errorCount} recursos com erro)`;
+            console.warn(`⚠️ ${errorCount} recursos falharam ao carregar:`, loadErrors);
+            showModelLoadErrors();
+        } else {
+            status.textContent = hasSave ? 'Progresso restaurado!' : 'Pronto!';
+        }
+
         await new Promise(r => setTimeout(r, 500));
 
-        console.log(`✅ ${totalResources} recursos pré-carregados com sucesso!`);
+        console.log(`✅ ${successCount}/${totalResources} recursos pré-carregados com sucesso!`);
+
+        // Iniciar auto-save
+        startAutoSave();
+
         goto('home');
 
     } catch (error) {
@@ -401,6 +575,31 @@ async function initSplash() {
         // Mesmo com erro, vai para home após delay
         setTimeout(() => goto('home'), 2000);
     }
+}
+
+/**
+ * Mostrar feedback visual sobre erros de carregamento de modelos
+ */
+function showModelLoadErrors() {
+    if (loadErrors.models.length === 0) return;
+
+    // Criar notificação temporária
+    const notification = document.createElement('div');
+    notification.className = 'load-error-notification';
+    notification.innerHTML = `
+        <div class="load-error-content">
+            <span class="load-error-icon">⚠️</span>
+            <div class="load-error-text">
+                <strong>${loadErrors.models.length} modelo(s) 3D não carregaram</strong>
+                <small>Alguns monstros/itens podem não aparecer corretamente</small>
+            </div>
+            <button class="load-error-close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+
+    // Auto-remover após 5 segundos
+    setTimeout(() => notification.remove(), 5000);
 }
 
 // ============================================
@@ -667,6 +866,59 @@ function hideMonsterDetails() {
     }
     // Atualizar a lista para refletir mudanças de status
     renderBestiary();
+    // Salvar progresso ao estudar monstro
+    saveGame();
+}
+
+// ============================================
+// DIARY SCREEN - RENDERIZAÇÃO
+// ============================================
+
+/**
+ * Renderizar entradas do diário
+ */
+function renderDiary() {
+    const container = document.getElementById('diary-entries');
+    if (!container) return;
+
+    if (GameData.diary.length === 0) {
+        container.innerHTML = `
+            <div class="diary-empty">
+                <p>📝 Seu diário está vazio</p>
+                <p class="small">Eventos de caçada aparecerão aqui</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Ordenar por data mais recente
+    const entries = [...GameData.diary].slice(0, 50); // Limitar a 50 entradas
+
+    container.innerHTML = entries.map((entry, index) => {
+        const icon = getDiaryEntryIcon(entry.text);
+        return `
+            <div class="diary-entry" style="animation-delay: ${index * 0.05}s">
+                <div class="diary-entry-header">
+                    <span class="diary-icon">${icon}</span>
+                    <span class="diary-date">${entry.date}</span>
+                </div>
+                <div class="diary-text">${entry.text}</div>
+                <div class="diary-location">📍 ${entry.location}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Obter ícone baseado no tipo de entrada
+ */
+function getDiaryEntryIcon(text) {
+    if (text.includes('Derrotou')) return '⚔️';
+    if (text.includes('Coletou')) return '📦';
+    if (text.includes('Encontrou')) return '👁️';
+    if (text.includes('Curou')) return '💊';
+    if (text.includes('Equipou')) return '🔧';
+    return '📝';
 }
 
 // ============================================
@@ -685,38 +937,152 @@ function updateProfileStats() {
 // ============================================
 
 let arSession = null;
+let arErrorShown = false;
+
+/**
+ * Mostrar modal de erro AR com opções
+ */
+function showARErrorModal(title, message, showDemoOption = true) {
+    // Criar overlay de erro
+    let modal = document.getElementById('ar-error-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ar-error-modal';
+        modal.className = 'ar-error-modal';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="ar-error-content">
+            <div class="ar-error-icon">📵</div>
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <div class="ar-error-info">
+                <strong>Requisitos para AR:</strong>
+                <ul>
+                    <li>✓ Navegador Chrome ou Edge (versão recente)</li>
+                    <li>✓ Dispositivo com câmera</li>
+                    <li>✓ Conexão HTTPS</li>
+                    <li>✓ Suporte a WebXR/ARCore</li>
+                </ul>
+            </div>
+            <div class="ar-error-buttons">
+                ${showDemoOption ? '<button class="ar-error-btn demo" onclick="startDemoMode()">🎮 Modo Demo</button>' : ''}
+                <button class="ar-error-btn back" onclick="closeARErrorModal()">← Voltar</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('visible');
+}
+
+function closeARErrorModal() {
+    const modal = document.getElementById('ar-error-modal');
+    if (modal) {
+        modal.classList.remove('visible');
+    }
+    goto('home');
+}
+
+/**
+ * Modo Demo - Simulação sem AR real
+ */
+function startDemoMode() {
+    closeARErrorModal();
+    console.log('🎮 Iniciando modo demo...');
+
+    // Iniciar sem WebXR
+    updateARHUD();
+    initARGeolocation();
+
+    // Spawnar monstro de exemplo
+    setTimeout(() => {
+        const scene = document.getElementById('ar-scene');
+        const spawner = scene?.systems['monster-spawner'];
+        if (spawner) {
+            spawner.spawnMonster();
+            spawner.spawnLoot();
+        }
+    }, 1000);
+
+    // Mostrar dica
+    showHitFeedback(false, 0, false, false, '');
+    const feedback = document.getElementById('ar-hit-feedback');
+    if (feedback) {
+        feedback.textContent = 'Modo Demo Ativo';
+        feedback.className = 'ar-hit-feedback demo-mode';
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+        }, 2000);
+    }
+}
 
 async function startARMode() {
     const scene = document.getElementById('ar-scene');
-    if (!scene) return;
+    if (!scene) {
+        showARErrorModal('Erro de Inicialização', 'Cena AR não encontrada. Tente recarregar a página.');
+        return;
+    }
+
+    // Verificar se está em HTTPS (necessário para WebXR)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        showARErrorModal(
+            'Conexão Insegura',
+            'WebXR requer conexão HTTPS. Acesse o jogo via HTTPS para usar AR.',
+            true
+        );
+        return;
+    }
 
     // Verificar suporte WebXR
     if (!navigator.xr) {
-        alert('WebXR não disponível neste navegador');
-        goto('home');
+        showARErrorModal(
+            'WebXR Não Suportado',
+            'Seu navegador não suporta WebXR. Use Chrome, Edge ou Samsung Internet em um dispositivo compatível.',
+            true
+        );
         return;
     }
 
     try {
+        // Verificar suporte a AR imersivo
         const supported = await navigator.xr.isSessionSupported('immersive-ar');
         if (!supported) {
-            alert('AR não suportado neste dispositivo');
-            goto('home');
+            // Tentar inlineAR como fallback
+            const inlineSupported = await navigator.xr.isSessionSupported('inline').catch(() => false);
+
+            showARErrorModal(
+                'AR Não Disponível',
+                'Seu dispositivo não suporta AR imersivo. Instale o Google Play Services for AR (ARCore) ou use um dispositivo compatível.',
+                true
+            );
             return;
         }
 
-        // Entrar em AR
+        // Tudo OK, entrar em AR
         if (scene.enterAR) {
             await scene.enterAR();
         }
 
         updateARHUD();
         initARGeolocation();
+        arErrorShown = false;
+
+        console.log('✅ Modo AR iniciado com sucesso!');
 
     } catch (e) {
-        console.error('Erro ao iniciar AR:', e);
-        alert('Erro ao iniciar AR: ' + e.message);
-        goto('home');
+        console.error('❌ Erro ao iniciar AR:', e);
+
+        let errorMessage = 'Ocorreu um erro ao iniciar o AR.';
+
+        if (e.name === 'NotAllowedError') {
+            errorMessage = 'Permissão de câmera negada. Permita o acesso à câmera para usar AR.';
+        } else if (e.name === 'NotSupportedError') {
+            errorMessage = 'Seu dispositivo não suporta os recursos AR necessários.';
+        } else if (e.message) {
+            errorMessage = e.message;
+        }
+
+        showARErrorModal('Erro ao Iniciar AR', errorMessage, true);
     }
 }
 
@@ -1227,13 +1593,17 @@ AFRAME.registerComponent('ar-monster', {
 
         // Marcar como derrotado no bestiário
         const monster = GameData.bestiary.find(m => m.id === this.data.type);
+        const monsterName = monster?.name || this.data.type;
         if (monster) {
             monster.status = 'defeated';
             monster.encounterCount++;
         }
 
-        // Adicionar ao diário
-        addDiaryEntry(`Derrotou um ${this.data.type}`);
+        // Adicionar ao diário com nome correto
+        addDiaryEntry(`Derrotou um ${monsterName}`);
+
+        // Salvar progresso
+        saveGame();
 
         // Esconder indicador de estado
         hideStateIndicator();
@@ -1547,21 +1917,64 @@ AFRAME.registerSystem('monster-spawner', {
             return !inventoryItem || inventoryItem.quantity === 0;
         });
 
+        // Classificar raridade dos itens
+        const rarityMap = {
+            'holy_water': 'common',
+            'salt': 'common',
+            'knife': 'common',
+            'shotgun': 'uncommon',
+            'crowbar': 'uncommon',
+            'colt': 'rare',
+            'devil_trap': 'rare',
+            'bible': 'epic',
+            'angel_blade': 'epic',
+            'blood_knife': 'rare',
+            'wooden_stake': 'uncommon',
+            'molotov': 'uncommon',
+            'lighter': 'common'
+        };
+
         // Se não há loot disponível, não spawna nada
         if (availableLoot.length === 0) {
             console.log('📦 Todos os itens já foram coletados!');
             return null;
         }
 
-        const loot = availableLoot[Math.floor(Math.random() * availableLoot.length)];
+        // Sistema de peso por raridade (itens mais raros têm menor chance)
+        const weightedLoot = availableLoot.map(loot => {
+            const rarity = rarityMap[loot.id] || 'common';
+            let weight = 1;
+            switch (rarity) {
+                case 'common': weight = 4; break;
+                case 'uncommon': weight = 3; break;
+                case 'rare': weight = 2; break;
+                case 'epic': weight = 1; break;
+            }
+            return { ...loot, rarity, weight };
+        });
+
+        // Selecionar baseado no peso
+        const totalWeight = weightedLoot.reduce((sum, l) => sum + l.weight, 0);
+        let random = Math.random() * totalWeight;
+        let selectedLoot = weightedLoot[0];
+
+        for (const loot of weightedLoot) {
+            random -= loot.weight;
+            if (random <= 0) {
+                selectedLoot = loot;
+                break;
+            }
+        }
 
         const entity = document.createElement('a-entity');
-        entity.setAttribute('ar-loot', loot);
+        entity.setAttribute('ar-loot', { ...selectedLoot, rarity: selectedLoot.rarity });
         entity.setAttribute('position', position);
 
         document.getElementById('monsters-container').appendChild(entity);
 
-        console.log(`✨ Loot ${loot.name} spawnou!`);
+        // Log com indicação de raridade
+        const rarityIcons = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣' };
+        console.log(`✨ Loot ${rarityIcons[selectedLoot.rarity]} ${selectedLoot.name} (${selectedLoot.rarity}) spawnou!`);
 
         return entity;
     },
@@ -1601,7 +2014,8 @@ AFRAME.registerComponent('ar-loot', {
         healAmount: { type: 'number', default: 0 },
         damage: { type: 'number', default: 0 },
         model: { type: 'string', default: 'holy-water-model' },
-        scale: { type: 'string', default: '0.6 0.6 0.6' }
+        scale: { type: 'string', default: '0.6 0.6 0.6' },
+        rarity: { type: 'string', default: 'common' }
     },
 
     init: function () {
@@ -1632,12 +2046,24 @@ AFRAME.registerComponent('ar-loot', {
             easing: 'linear'
         });
 
-        // Adicionar efeito de brilho (luz pontual)
+        // Cores por raridade
+        const rarityColors = {
+            'common': '#ffffff',
+            'uncommon': '#44ff44',
+            'rare': '#4488ff',
+            'epic': '#aa44ff'
+        };
+
+        const lightColor = this.data.category === 'healing'
+            ? '#44ff44'
+            : (rarityColors[this.data.rarity] || '#4ecdc4');
+
+        // Adicionar efeito de brilho (luz pontual) baseado na raridade
         const light = document.createElement('a-light');
         light.setAttribute('type', 'point');
-        light.setAttribute('color', this.data.category === 'healing' ? '#44ff44' : '#4ecdc4');
-        light.setAttribute('intensity', '0.8');
-        light.setAttribute('distance', '1');
+        light.setAttribute('color', lightColor);
+        light.setAttribute('intensity', this.data.rarity === 'epic' ? '1.5' : (this.data.rarity === 'rare' ? '1.2' : '0.8'));
+        light.setAttribute('distance', this.data.rarity === 'epic' ? '2' : '1');
         this.el.appendChild(light);
 
         // Registrar no sistema de combate para detecção
@@ -1682,24 +2108,61 @@ AFRAME.registerComponent('ar-loot', {
         if (added) {
             GameData.player.itemsCollected++;
 
-            // Feedback visual - mostrar nome do item
+            // Cores por raridade
+            const rarityColors = {
+                'common': '#cccccc',
+                'uncommon': '#44ff44',
+                'rare': '#4488ff',
+                'epic': '#aa44ff'
+            };
+            const rarityLabels = {
+                'common': '',
+                'uncommon': '🟢 ',
+                'rare': '🔵 RARO! ',
+                'epic': '🟣 ÉPICO! '
+            };
+
+            // Feedback visual - mostrar nome do item com raridade
             const feedback = document.getElementById('ar-hit-feedback');
             if (feedback) {
-                feedback.textContent = `+1 ${this.data.name}`;
-                feedback.style.color = '#ffcc00';
-                feedback.className = 'ar-hit-feedback hit';
+                const rarityLabel = rarityLabels[this.data.rarity] || '';
+                feedback.textContent = `${rarityLabel}+1 ${this.data.name}`;
+                feedback.style.color = rarityColors[this.data.rarity] || '#ffcc00';
+
+                // Classe especial para itens raros/épicos
+                if (this.data.rarity === 'epic') {
+                    feedback.className = 'ar-hit-feedback loot-epic';
+                } else if (this.data.rarity === 'rare') {
+                    feedback.className = 'ar-hit-feedback loot-rare';
+                } else {
+                    feedback.className = 'ar-hit-feedback hit';
+                }
+
+                const duration = this.data.rarity === 'epic' ? 1500 : (this.data.rarity === 'rare' ? 1000 : 500);
                 setTimeout(() => {
                     feedback.className = 'ar-hit-feedback';
                     feedback.style.color = '';
-                }, 500);
+                }, duration);
             }
 
-            // Vibrar
+            // Vibração mais intensa para itens raros
             if (navigator.vibrate) {
-                navigator.vibrate([30, 20, 30]);
+                if (this.data.rarity === 'epic') {
+                    navigator.vibrate([50, 30, 50, 30, 100, 50, 100]);
+                } else if (this.data.rarity === 'rare') {
+                    navigator.vibrate([50, 30, 80, 30, 50]);
+                } else {
+                    navigator.vibrate([30, 20, 30]);
+                }
             }
 
-            console.log(`✨ Coletou: ${this.data.name}`);
+            // Adicionar ao diário
+            addDiaryEntry(`Coletou ${this.data.name} (${this.data.rarity || 'comum'})`);
+
+            console.log(`✨ Coletou: ${this.data.name} [${this.data.rarity}]`);
+
+            // Salvar progresso
+            saveGame();
         }
 
         // Remover do mundo
@@ -2381,36 +2844,78 @@ function createFullMap() {
         .addTo(fullMap)
         .bindPopup('📍 Você está aqui');
 
-    // Adicionar marcadores de monstros
+    // Adicionar marcadores de monstros com navegação
     GeoState.fullMapMonsterMarkers = [];
-    GeoState.monsterSpawns.forEach(monster => {
+    GeoState.monsterSpawns.forEach((monster, index) => {
         const monsterIcon = L.divIcon({
             className: 'monster-marker-full',
-            html: `<div style="width:24px;height:24px;background:#ff4444;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 10px #ff4444;">${monster.icon}</div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
+            html: `<div style="width:30px;height:30px;background:linear-gradient(145deg, #ff4444, #cc0000);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 15px #ff4444;cursor:pointer;">${monster.icon}</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
         });
+
+        const popupContent = `
+            <div class="map-popup-content">
+                <div class="map-popup-header">
+                    <span class="popup-icon">${monster.icon}</span>
+                    <strong>${monster.name}</strong>
+                </div>
+                <div class="map-popup-info">
+                    <span>📏 ~${monster.distance}m de distância</span>
+                </div>
+                <div class="map-popup-actions">
+                    <button class="map-nav-btn" onclick="navigateToTarget(${monster.latitude}, ${monster.longitude}, '${monster.name}')">
+                        🧭 Navegar
+                    </button>
+                    <button class="map-hunt-btn" onclick="startHuntFromMap()">
+                        🎯 Caçar
+                    </button>
+                </div>
+            </div>
+        `;
 
         const marker = L.marker([monster.latitude, monster.longitude], { icon: monsterIcon })
             .addTo(fullMap)
-            .bindPopup(`<b>${monster.icon} ${monster.name}</b><br>Distância: ~${monster.distance}m`);
+            .bindPopup(popupContent, { className: 'custom-popup' });
+
+        // Adicionar pulso para monstros próximos
+        if (monster.distance < 100) {
+            marker.getElement()?.classList.add('nearby-pulse');
+        }
 
         GeoState.fullMapMonsterMarkers.push(marker);
     });
 
-    // Adicionar marcadores de loot
+    // Adicionar marcadores de loot com navegação
     GeoState.fullMapLootMarkers = [];
-    GeoState.lootSpawns.forEach(loot => {
+    GeoState.lootSpawns.forEach((loot, index) => {
         const lootIcon = L.divIcon({
             className: 'loot-marker-full',
-            html: `<div style="width:20px;height:20px;background:#ffcc00;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 8px #ffcc00;">${loot.icon}</div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            html: `<div style="width:24px;height:24px;background:linear-gradient(145deg, #ffcc00, #ff9900);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 10px #ffcc00;cursor:pointer;">${loot.icon}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
         });
+
+        const popupContent = `
+            <div class="map-popup-content">
+                <div class="map-popup-header">
+                    <span class="popup-icon">${loot.icon}</span>
+                    <strong>${loot.name}</strong>
+                </div>
+                <div class="map-popup-info">
+                    <span>📏 ~${loot.distance}m de distância</span>
+                </div>
+                <div class="map-popup-actions">
+                    <button class="map-nav-btn" onclick="navigateToTarget(${loot.latitude}, ${loot.longitude}, '${loot.name}')">
+                        🧭 Navegar
+                    </button>
+                </div>
+            </div>
+        `;
 
         const marker = L.marker([loot.latitude, loot.longitude], { icon: lootIcon })
             .addTo(fullMap)
-            .bindPopup(`<b>${loot.icon} ${loot.name}</b><br>Distância: ~${loot.distance}m`);
+            .bindPopup(popupContent, { className: 'custom-popup' });
 
         GeoState.fullMapLootMarkers.push(marker);
     });
@@ -2419,6 +2924,60 @@ function createFullMap() {
     setTimeout(() => fullMap.invalidateSize(), 100);
 
     console.log('🗺️ Mapa full inicializado com pins de monstros e loot');
+}
+
+/**
+ * Navegar para um alvo específico usando Google Maps ou app nativo
+ */
+function navigateToTarget(lat, lng, name) {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+
+    // Mostrar confirmação
+    if (confirm(`Abrir navegação para ${name}?`)) {
+        window.open(url, '_blank');
+
+        // Adicionar ao diário
+        addDiaryEntry(`Iniciou navegação para ${name}`);
+    }
+}
+
+/**
+ * Iniciar caçada diretamente do mapa
+ */
+function startHuntFromMap() {
+    // Fechar popup e mudar para tela de caça
+    if (fullMap) {
+        fullMap.closePopup();
+    }
+    goto('hunt');
+}
+
+/**
+ * Mostrar rota no mapa até o alvo
+ */
+function showRouteOnMap(targetLat, targetLng) {
+    if (!fullMap || !GeoState.currentPosition) return;
+
+    const { latitude, longitude } = GeoState.currentPosition;
+
+    // Remover rota anterior se existir
+    if (GeoState.currentRoute) {
+        fullMap.removeLayer(GeoState.currentRoute);
+    }
+
+    // Desenhar linha até o alvo
+    GeoState.currentRoute = L.polyline(
+        [[latitude, longitude], [targetLat, targetLng]],
+        {
+            color: '#cc0000',
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '10, 10'
+        }
+    ).addTo(fullMap);
+
+    // Ajustar zoom para mostrar toda a rota
+    fullMap.fitBounds(GeoState.currentRoute.getBounds(), { padding: [50, 50] });
 }
 
 // ============================================
@@ -2665,6 +3224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Profile name
     document.getElementById('profile-name')?.addEventListener('change', (e) => {
         GameData.player.name = e.target.value;
+        saveGame(); // Salvar ao mudar nome
     });
 
     // AR buttons
