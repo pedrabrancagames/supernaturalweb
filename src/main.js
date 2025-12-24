@@ -859,23 +859,72 @@ AFRAME.registerComponent('ar-monster', {
         const weapon = GameData.inventory.weapons.find(w => w.id === weaponId);
         let actualDamage = amount;
         let isWeakness = false;
+        let isImmune = false;
+        let immuneReason = '';
 
-        if (weapon && weapon.weakness.includes(this.data.type)) {
-            actualDamage = amount * 2;
-            isWeakness = true;
-        } else if (weapon && weapon.weakness.length > 0 && !weapon.weakness.includes(this.data.type)) {
-            actualDamage = Math.floor(amount * 0.3);
+        // Verificar se a arma é efetiva contra este monstro
+        if (weapon && weapon.weakness && weapon.weakness.length > 0) {
+            if (weapon.weakness.includes(this.data.type)) {
+                // Arma é fraqueza do monstro - DANO CRÍTICO!
+                actualDamage = amount * 2;
+                isWeakness = true;
+            } else {
+                // Arma tem fraquezas definidas mas este monstro não está na lista
+                // O monstro é IMUNE a esta arma
+                actualDamage = 0;
+                isImmune = true;
+                immuneReason = this.getImmunityMessage(this.data.type, weapon);
+            }
+        } else if (weapon && (!weapon.weakness || weapon.weakness.length === 0)) {
+            // Arma genérica (como mão ou faca sem fraqueza) - dano reduzido
+            actualDamage = Math.floor(amount * 0.5);
         }
 
-        this.data.hp -= actualDamage;
+        // Aplicar dano apenas se não for imune
+        if (!isImmune) {
+            this.data.hp -= actualDamage;
+            updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
 
-        updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
-
-        if (this.data.hp <= 0) {
-            this.die();
+            if (this.data.hp <= 0) {
+                this.die();
+            }
         }
 
-        return { damage: actualDamage, isWeakness, remainingHp: this.data.hp };
+        // Nome do monstro para feedback
+        const monsterNames = {
+            werewolf: 'Lobisomem',
+            vampire: 'Vampiro',
+            ghost: 'Fantasma',
+            demon: 'Demônio',
+            wendigo: 'Wendigo',
+            hellhound: 'Cão do Inferno',
+            witch: 'Bruxa',
+            crossroads_demon: 'Demônio da Encruzilhada'
+        };
+
+        return {
+            damage: actualDamage,
+            isWeakness,
+            isImmune,
+            immuneReason,
+            monsterName: monsterNames[this.data.type] || this.data.type,
+            remainingHp: this.data.hp
+        };
+    },
+
+    getImmunityMessage: function (monsterType, weapon) {
+        // Mensagens personalizadas baseadas no tipo de monstro e arma
+        const messages = {
+            werewolf: `Lobisomens só recebem dano de prata!`,
+            vampire: `Vampiros precisam de sangue de morto ou estaca!`,
+            ghost: `Fantasmas são imunes! Use ferro ou sal!`,
+            demon: `Demônios resistem a isso! Use água benta ou armadilha!`,
+            wendigo: `Wendigos só morrem com fogo!`,
+            hellhound: `Cães do Inferno só temem a Lâmina de Anjo!`,
+            witch: `Destrua os sacos de maldição primeiro!`,
+            crossroads_demon: `Use a Armadilha do Diabo!`
+        };
+        return messages[monsterType] || `Este monstro é imune a ${weapon.name}!`;
     },
 
     die: function () {
@@ -1394,7 +1443,16 @@ function showMonsterHP(name, hp, maxHp) {
     const nameEl = document.getElementById('ar-monster-name');
     const fillEl = document.getElementById('ar-monster-hp-fill');
 
-    const names = { werewolf: '🐺 Lobisomem', vampire: '🧛 Vampiro', ghost: '👻 Fantasma', demon: '😈 Demônio' };
+    const names = {
+        werewolf: '🐺 Lobisomem',
+        vampire: '🧛 Vampiro',
+        ghost: '👻 Fantasma',
+        demon: '😈 Demônio',
+        wendigo: '🦴 Wendigo',
+        hellhound: '🐕‍🦺 Cão do Inferno',
+        witch: '🧙‍♀️ Bruxa',
+        crossroads_demon: '🔴 Demônio da Encruzilhada'
+    };
 
     nameEl.textContent = names[name] || name;
     fillEl.style.width = `${(hp / maxHp) * 100}%`;
@@ -1410,21 +1468,59 @@ function hideMonsterHP() {
     document.getElementById('ar-monster-hp')?.classList.remove('visible');
 }
 
-function showHitFeedback(hit, damage = 0, isWeakness = false) {
+function showHitFeedback(hit, damage = 0, isWeakness = false, isImmune = false, immuneReason = '') {
     const feedback = document.getElementById('ar-hit-feedback');
     if (!feedback) return;
 
-    if (hit) {
-        feedback.textContent = isWeakness ? `⚡-${damage}` : `-${damage}`;
-        feedback.className = 'ar-hit-feedback hit';
+    // Limpar classes anteriores
+    feedback.className = 'ar-hit-feedback';
+
+    if (isImmune) {
+        // Monstro é imune - mostrar mensagem de aviso
+        feedback.textContent = immuneReason || 'IMUNE!';
+        feedback.className = 'ar-hit-feedback immune';
+
+        // Vibrar para indicar erro
+        if (navigator.vibrate) {
+            navigator.vibrate([50, 50, 50]);
+        }
+
+        // Manter a mensagem visível por mais tempo para leitura
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+        }, 2000);
+    } else if (hit) {
+        if (isWeakness) {
+            // Dano crítico - fraqueza!
+            feedback.textContent = `⚡ CRÍTICO! -${damage}`;
+            feedback.className = 'ar-hit-feedback critical';
+
+            // Vibrar forte para indicar sucesso
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        } else if (damage > 0) {
+            // Dano normal
+            feedback.textContent = `-${damage}`;
+            feedback.className = 'ar-hit-feedback hit';
+        } else {
+            // Hit mas sem dano (dano 0)
+            feedback.textContent = '0';
+            feedback.className = 'ar-hit-feedback miss';
+        }
+
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+        }, 500);
     } else {
+        // Miss - não acertou nada
         feedback.textContent = 'MISS';
         feedback.className = 'ar-hit-feedback miss';
-    }
 
-    setTimeout(() => {
-        feedback.className = 'ar-hit-feedback';
-    }, 300);
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+        }, 300);
+    }
 }
 
 /**
@@ -2233,7 +2329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (combat) {
             const result = combat.fire();
-            showHitFeedback(result.hit, result.damage, result.isWeakness);
+            showHitFeedback(result.hit, result.damage, result.isWeakness, result.isImmune, result.immuneReason);
         }
     });
 

@@ -1425,24 +1425,144 @@ input {
 
 .ar-hit-feedback {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 48px;
+  font-size: 24px;
   font-weight: bold;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, transform 0.3s;
   text-shadow: 0 0 20px currentColor;
+  pointer-events: none;
+  z-index: 100;
+  text-align: center;
+  max-width: 90%;
+  padding: 10px 20px;
+  border-radius: 10px;
 }
 
+/* Dano normal */
 .ar-hit-feedback.hit {
   color: #ff4444;
   opacity: 1;
+  animation: hitPulse 0.5s ease-out;
 }
 
+/* Miss - não acertou */
 .ar-hit-feedback.miss {
   color: #888;
   opacity: 1;
+  font-size: 20px;
+}
+
+/* Dano crítico - fraqueza explorada! */
+.ar-hit-feedback.critical {
+  color: #ffdd00;
+  opacity: 1;
+  font-size: 28px;
+  text-shadow:
+    0 0 10px #ffdd00,
+    0 0 20px #ffaa00,
+    0 0 40px #ff8800;
+  animation: criticalHit 0.6s ease-out;
+}
+
+/* Imune - arma não afeta o monstro */
+.ar-hit-feedback.immune {
+  color: #ff6600;
+  opacity: 1;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #ff6600;
+  text-shadow: none;
+  box-shadow: 0 0 20px rgba(255, 102, 0, 0.4);
+  animation: immuneShake 0.5s ease-out;
+}
+
+/* Animação de pulse para hit normal */
+@keyframes hitPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animação de dano crítico */
+@keyframes criticalHit {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+    opacity: 0;
+  }
+
+  30% {
+    transform: translate(-50%, -50%) scale(1.3) rotate(5deg);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(-3deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Animação de tremida para imunidade */
+@keyframes immuneShake {
+  0% {
+    transform: translate(-50%, -50%) translateX(0);
+    opacity: 0;
+  }
+
+  10% {
+    transform: translate(-50%, -50%) translateX(-10px);
+    opacity: 1;
+  }
+
+  20% {
+    transform: translate(-50%, -50%) translateX(10px);
+  }
+
+  30% {
+    transform: translate(-50%, -50%) translateX(-8px);
+  }
+
+  40% {
+    transform: translate(-50%, -50%) translateX(8px);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) translateX(-5px);
+  }
+
+  60% {
+    transform: translate(-50%, -50%) translateX(5px);
+  }
+
+  70% {
+    transform: translate(-50%, -50%) translateX(-2px);
+  }
+
+  80% {
+    transform: translate(-50%, -50%) translateX(2px);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) translateX(0);
+    opacity: 1;
+  }
 }
 
 /* ========================================
