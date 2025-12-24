@@ -151,8 +151,69 @@
       <button class="btn-back" id="btn-back-bestiary">←</button>
       <h2>📖 Casos</h2>
     </div>
+
+    <div class="bestiary-filters">
+      <button class="bestiary-filter active" data-filter="all">Todos</button>
+      <button class="bestiary-filter" data-filter="defeated">Derrotados</button>
+      <button class="bestiary-filter" data-filter="unknown">Desconhecidos</button>
+    </div>
+
     <div class="bestiary-list" id="bestiary-list">
       <!-- Monstros renderizados via JS -->
+    </div>
+
+    <!-- Modal de Detalhes do Monstro -->
+    <div class="monster-detail-overlay" id="monster-detail-overlay">
+      <div class="monster-detail-panel">
+        <button class="monster-detail-close" id="monster-detail-close">✕</button>
+
+        <div class="monster-detail-header">
+          <div class="monster-detail-icon" id="detail-icon">👻</div>
+          <div class="monster-detail-title">
+            <h2 id="detail-name">Fantasma</h2>
+            <span class="monster-detail-type" id="detail-type">Espírito</span>
+          </div>
+          <div class="monster-detail-danger" id="detail-danger">
+            <span class="danger-label">Perigo</span>
+            <div class="danger-skulls" id="detail-skulls">💀💀💀</div>
+          </div>
+        </div>
+
+        <div class="monster-detail-status" id="detail-status">
+          <span class="status-badge unknown">Desconhecido</span>
+        </div>
+
+        <div class="monster-detail-section">
+          <h3>📜 Lore</h3>
+          <p id="detail-lore">Descrição do monstro...</p>
+        </div>
+
+        <div class="monster-detail-section">
+          <h3>⚔️ Fraquezas</h3>
+          <div class="weakness-list" id="detail-weaknesses">
+            <!-- Fraquezas renderizadas via JS -->
+          </div>
+        </div>
+
+        <div class="monster-detail-section">
+          <h3>🛡️ Imunidades</h3>
+          <div class="immunity-list" id="detail-immunities">
+            <!-- Imunidades renderizadas via JS -->
+          </div>
+        </div>
+
+        <div class="monster-detail-section tips-section">
+          <h3>💡 Dicas de Caça</h3>
+          <p id="detail-tips">Dicas para derrotar o monstro...</p>
+        </div>
+
+        <div class="monster-detail-stats">
+          <div class="detail-stat">
+            <span class="stat-number" id="detail-encounters">0</span>
+            <span class="stat-text">Encontros</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

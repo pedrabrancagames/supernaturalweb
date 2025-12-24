@@ -477,62 +477,493 @@ input {
 /* ========================================
    BESTIARY SCREEN
    ======================================== */
+#screen-bestiary {
+  background: linear-gradient(180deg, #0f0a0a 0%, #0a0a0a 100%);
+}
+
+/* Estado vazio do bestiário */
+.bestiary-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.bestiary-empty p {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.bestiary-empty .small {
+  font-size: 12px;
+  color: #555;
+}
+
+/* Filtros do Bestiário */
+.bestiary-filters {
+  display: flex;
+  gap: 8px;
+  padding: 15px 15px 10px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.bestiary-filter {
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #333;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #888;
+  transition: all 0.2s ease;
+}
+
+.bestiary-filter.active {
+  background: linear-gradient(145deg, rgba(204, 0, 0, 0.3), rgba(153, 0, 0, 0.2));
+  border-color: #cc0000;
+  color: #fff;
+}
+
+.bestiary-filter:active {
+  transform: scale(0.95);
+}
+
+/* Lista de Monstros */
 .bestiary-list {
   flex: 1;
   overflow-y: auto;
   padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
+/* Card de Monstro - Design Premium */
 .monster-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 15px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.monster-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #cc0000, #660000);
+  opacity: 0.5;
+  transition: opacity 0.3s;
 }
 
 .monster-card:active {
-  background: rgba(255, 255, 255, 0.06);
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.08);
 }
 
+.monster-card:active::before {
+  opacity: 1;
+}
+
+/* Estados do Card */
+.monster-card.defeated::before {
+  background: linear-gradient(180deg, #44ff44, #228822);
+}
+
+.monster-card.encountered::before {
+  background: linear-gradient(180deg, #ffcc00, #cc9900);
+}
+
+/* Ícone do Monstro */
 .monster-icon {
-  font-size: 36px;
-  width: 50px;
-  height: 50px;
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+  border-radius: 14px;
+  border: 1px solid #333;
+  flex-shrink: 0;
 }
 
+/* Info do Monstro */
 .monster-info {
   flex: 1;
+  min-width: 0;
 }
 
 .monster-name {
   font-weight: 600;
-  margin-bottom: 2px;
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: #fff;
 }
 
 .monster-type {
   font-size: 12px;
   color: #888;
+  margin-bottom: 6px;
 }
 
+.monster-danger {
+  display: flex;
+  gap: 2px;
+  font-size: 10px;
+}
+
+.monster-danger .skull {
+  color: #cc0000;
+  opacity: 0.3;
+}
+
+.monster-danger .skull.active {
+  opacity: 1;
+  text-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+}
+
+/* Status do Monstro */
 .monster-status {
-  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.monster-status.defeated {
+.monster-status .status-icon {
+  font-size: 24px;
+}
+
+.monster-status .status-text {
+  font-size: 9px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.monster-status.defeated .status-icon {
   color: #44ff44;
 }
 
-.monster-status.locked {
+.monster-status.encountered .status-icon {
+  color: #ffcc00;
+}
+
+.monster-status.unknown .status-icon {
   color: #666;
+}
+
+/* ========================================
+   MODAL DE DETALHES DO MONSTRO
+   ======================================== */
+.monster-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s 0.3s;
+}
+
+.monster-detail-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s;
+}
+
+.monster-detail-panel {
+  width: 100%;
+  max-height: 90vh;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  border-radius: 24px 24px 0 0;
+  padding: 24px;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.monster-detail-overlay.visible .monster-detail-panel {
+  transform: translateY(0);
+}
+
+/* Handle visual */
+.monster-detail-panel::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+}
+
+/* Close Button */
+.monster-detail-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #888;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.monster-detail-close:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+}
+
+/* Header do Detalhe */
+.monster-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.monster-detail-icon {
+  font-size: 56px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(204, 0, 0, 0.2), rgba(100, 0, 0, 0.1));
+  border-radius: 20px;
+  border: 2px solid #cc0000;
+  box-shadow: 0 0 20px rgba(204, 0, 0, 0.2);
+}
+
+.monster-detail-title {
+  flex: 1;
+}
+
+.monster-detail-title h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.monster-detail-type {
+  font-size: 13px;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.monster-detail-danger {
+  text-align: center;
+}
+
+.danger-label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.danger-skulls {
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+/* Status Badge */
+.monster-detail-status {
+  margin-bottom: 20px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.status-badge.unknown {
+  background: rgba(102, 102, 102, 0.2);
+  color: #888;
+  border: 1px solid #444;
+}
+
+.status-badge.encountered {
+  background: rgba(255, 204, 0, 0.15);
+  color: #ffcc00;
+  border: 1px solid #ffcc00;
+}
+
+.status-badge.studied {
+  background: rgba(68, 136, 255, 0.15);
+  color: #4488ff;
+  border: 1px solid #4488ff;
+}
+
+.status-badge.defeated {
+  background: rgba(68, 255, 68, 0.15);
+  color: #44ff44;
+  border: 1px solid #44ff44;
+}
+
+/* Seções do Detalhe */
+.monster-detail-section {
+  margin-bottom: 24px;
+}
+
+.monster-detail-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cc0000;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monster-detail-section p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #ccc;
+}
+
+/* Seção de Dicas - Destaque */
+.tips-section {
+  background: linear-gradient(145deg, rgba(255, 204, 0, 0.08), rgba(255, 204, 0, 0.02));
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.tips-section h3 {
+  color: #ffcc00;
+}
+
+.tips-section p {
+  color: #eee;
+}
+
+/* Lista de Fraquezas */
+.weakness-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weakness-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(68, 255, 68, 0.05);
+  border: 1px solid rgba(68, 255, 68, 0.1);
+  border-radius: 12px;
+}
+
+.weakness-icon {
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(68, 255, 68, 0.1);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.weakness-content {
+  flex: 1;
+}
+
+.weakness-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #44ff44;
+  margin-bottom: 2px;
+}
+
+.weakness-desc {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+
+/* Lista de Imunidades */
+.immunity-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.immunity-tag {
+  padding: 6px 12px;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.2);
+  border-radius: 16px;
+  font-size: 11px;
+  color: #ff6666;
+}
+
+/* Stats do Monstro */
+.monster-detail-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px 0;
+  border-top: 1px solid #2a2a2a;
+  margin-top: 10px;
+}
+
+.detail-stat {
+  text-align: center;
+}
+
+.detail-stat .stat-number {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #cc0000;
+}
+
+.detail-stat .stat-text {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* ========================================

@@ -55,10 +55,138 @@ const GameData = {
     },
 
     bestiary: [
-        { id: 'werewolf', name: 'Lobisomem', icon: '🐺', type: 'Licantropo', defeated: false, weakness: 'Prata' },
-        { id: 'vampire', name: 'Vampiro', icon: '🧛', type: 'Morto-Vivo', defeated: false, weakness: 'Estaca/Sol' },
-        { id: 'ghost', name: 'Fantasma', icon: '👻', type: 'Espírito', defeated: false, weakness: 'Ferro/Sal' },
-        { id: 'demon', name: 'Demônio', icon: '😈', type: 'Sobrenatural', defeated: false, weakness: 'Água Benta' }
+        {
+            id: 'werewolf',
+            name: 'Lobisomem',
+            icon: '🐺',
+            type: 'Licantropo',
+            status: 'unknown', // unknown, encountered, studied, defeated
+            encounterCount: 0,
+            lore: 'Humanos amaldiçoados que se transformam em bestas ferozes sob a luz da lua cheia. A licantropia é transmitida através de uma mordida e não tem cura conhecida. Extremamente fortes e rápidos, mantêm alguma consciência humana.',
+            weaknesses: [
+                { item: 'Bala de Prata', description: 'Um tiro certeiro com bala de prata no coração é fatal.' },
+                { item: 'Lâmina de Prata', description: 'Facas ou espadas banhadas em prata causam dano severo.' }
+            ],
+            immunities: ['Fogo', 'Armas comuns', 'Água benta'],
+            tips: 'Use o Colt com munição de prata. Ataque durante a transformação quando estão mais vulneráveis. Evite combate corpo-a-corpo.',
+            dangerLevel: 4
+        },
+        {
+            id: 'vampire',
+            name: 'Vampiro',
+            icon: '🧛',
+            type: 'Morto-Vivo',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Criaturas da noite que se alimentam de sangue humano. Possuem força e velocidade sobre-humanas, além de capacidade de hipnose. A maioria foi humana antes de ser transformada por outro vampiro.',
+            weaknesses: [
+                { item: 'Sangue de Morto', description: 'A Lâmina com Sangue de Morto enfraquece vampiros.' },
+                { item: 'Decapitação', description: 'Cortar a cabeça é uma forma definitiva de matar.' },
+                { item: 'Estaca de Madeira', description: 'Uma estaca no coração imobiliza, permitindo o golpe final.' }
+            ],
+            immunities: ['Balas comuns', 'Água benta'],
+            tips: 'Primeiro ataque com a Faca com Sangue do Morto para enfraquecer. Quando o HP chegar a zero, finalize com a Estaca de Madeira.',
+            dangerLevel: 5
+        },
+        {
+            id: 'ghost',
+            name: 'Fantasma',
+            icon: '👻',
+            type: 'Espírito',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Espíritos de pessoas mortas presas ao plano terreno por assuntos inacabados ou mortes violentas. Podem ser benignos ou extremamente perigosos. Geralmente assombram o local de sua morte ou estão ligados a um objeto pessoal.',
+            weaknesses: [
+                { item: 'Sal', description: 'Círculos de sal os mantém afastados temporariamente.' },
+                { item: 'Ferro', description: 'Armas de ferro puro dispersam fantasmas temporariamente.' },
+                { item: 'Queimar Ossos', description: 'Salgar e queimar os restos mortais destrói o fantasma para sempre.' }
+            ],
+            immunities: ['Armas físicas normais', 'Maioria das armas sobrenaturais'],
+            tips: 'Use a Filmadora Antiga para torná-los visíveis. Ataque com a Barra de Ferro para dispersá-los. Para destruição permanente, encontre e queime os ossos.',
+            dangerLevel: 3
+        },
+        {
+            id: 'demon',
+            name: 'Demônio',
+            icon: '😈',
+            type: 'Sobrenatural',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Almas humanas corrompidas que foram ao Inferno e retornaram como entidades malignas. Possuem corpos humanos e têm poderes telecinéticos. Hierarquia complexa com demônios de olhos pretos sendo os mais comuns.',
+            weaknesses: [
+                { item: 'Armadilha do Diabo', description: 'O Selo da Armadilha imobiliza demônios completamente.' },
+                { item: 'Água Benta', description: 'Causa dor intensa mas não mata.' },
+                { item: 'Exorcismo', description: 'A leitura da Bíblia expulsa o demônio do corpo hospedeiro.' },
+                { item: 'Lâmina de Anjo', description: 'Mata o demônio permanentemente.' }
+            ],
+            immunities: ['Armas físicas', 'Fogo'],
+            tips: 'Use primeiro o Selo da Armadilha do Diabo para imobilizar. Depois use a Bíblia para exorcizar. Para matar definitivamente, use a Lâmina de Anjo.',
+            dangerLevel: 5
+        },
+        {
+            id: 'wendigo',
+            name: 'Wendigo',
+            icon: '🦴',
+            type: 'Criatura',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Humanos que recorreram ao canibalismo em condições extremas e foram transformados em criaturas imortais e famintas. Incrivelmente rápidos, fortes e territoriais. Hibernam por longos períodos e caçam em florestas remotas.',
+            weaknesses: [
+                { item: 'Fogo', description: 'A única forma de matar um Wendigo é queimá-lo.' }
+            ],
+            immunities: ['Balas', 'Facas', 'Sal', 'Água benta', 'Ferro'],
+            tips: 'Jogue o Coquetel Molotov para banhar em líquido inflamável. Em seguida, use o Isqueiro para acender as chamas e destruí-lo.',
+            dangerLevel: 4
+        },
+        {
+            id: 'hellhound',
+            name: 'Cão do Inferno',
+            icon: '🐕‍🦺',
+            type: 'Sobrenatural',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Bestas demoníacas invisíveis a olho nu que servem como cobradores de almas para demônios da encruzilhada. Quando um contrato vence, os cães do inferno caçam e arrastam a alma para o Inferno.',
+            weaknesses: [
+                { item: 'Sal', description: 'Círculos de sal os impedem de atacar.' },
+                { item: 'Lâmina de Anjo', description: 'A única arma que pode matar um Cão do Inferno.' }
+            ],
+            immunities: ['Armas comuns', 'Água benta', 'Ferro'],
+            tips: 'Desenhe um círculo de sal no chão para se proteger. Use a Lâmina de Anjo para atacar. Óculos especiais ou estar à beira da morte permite vê-los.',
+            dangerLevel: 5
+        },
+        {
+            id: 'witch',
+            name: 'Bruxa',
+            icon: '🧙‍♀️',
+            type: 'Humano',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Humanos que fizeram pactos com demônios em troca de poderes mágicos. Praticam magia negra usando sacos de maldição contendo ingredientes macabros. Enquanto os sacos existirem, a bruxa é praticamente invencível.',
+            weaknesses: [
+                { item: 'Destruir Sacos de Maldição', description: 'Destrua todos os sacos de maldição para torná-la vulnerável.' },
+                { item: 'Armas Letais', description: 'Uma vez vulnerável, qualquer arma que mate humanos funciona.' }
+            ],
+            immunities: ['Magia (enquanto os sacos existirem)', 'Ataques diretos'],
+            tips: 'Procure e destrua todos os Sacos de Maldição espalhados pela área. Só então a bruxa se tornará vulnerável. Finalize com Faca ou Revólver.',
+            dangerLevel: 4
+        },
+        {
+            id: 'crossroads_demon',
+            name: 'Demônio da Encruzilhada',
+            icon: '🔴',
+            type: 'Sobrenatural',
+            status: 'unknown',
+            encounterCount: 0,
+            lore: 'Demônios especiais que fazem pactos com humanos em encruzilhadas. Oferecem desejos em troca da alma após um período (geralmente 10 anos). São invocados enterrando uma caixa com foto e ossos de gato preto.',
+            weaknesses: [
+                { item: 'Armadilha do Diabo', description: 'Imobiliza completamente o demônio.' },
+                { item: 'Exorcismo', description: 'Expulsa o demônio do corpo hospedeiro.' },
+                { item: 'Lâmina de Anjo', description: 'Mata permanentemente.' }
+            ],
+            immunities: ['Armas físicas', 'Fogo'],
+            tips: 'Vá até uma encruzilhada. Enterre a Caixa com Foto para invocá-lo. Use o Selo da Armadilha para prendê-lo e a Bíblia para exorcizar.',
+            dangerLevel: 4
+        }
     ],
 
     diary: [],
@@ -374,27 +502,171 @@ function equipItemFull(itemId, category) {
 // BESTIARY SCREEN
 // ============================================
 
-function renderBestiary() {
+let currentBestiaryFilter = 'all';
+
+function renderBestiary(filter = currentBestiaryFilter) {
     const list = document.getElementById('bestiary-list');
     if (!list) return;
 
+    currentBestiaryFilter = filter;
     list.innerHTML = '';
 
-    GameData.bestiary.forEach(monster => {
+    // Filtrar os monstros baseado no filtro selecionado
+    let filteredMonsters = GameData.bestiary;
+
+    if (filter === 'defeated') {
+        filteredMonsters = GameData.bestiary.filter(m => m.status === 'defeated');
+    } else if (filter === 'unknown') {
+        filteredMonsters = GameData.bestiary.filter(m => m.status === 'unknown');
+    }
+
+    if (filteredMonsters.length === 0) {
+        list.innerHTML = `
+            <div class="bestiary-empty">
+                <p>📭 Nenhum monstro encontrado</p>
+                <p class="small">Comece uma caçada para encontrar monstros!</p>
+            </div>
+        `;
+        return;
+    }
+
+    filteredMonsters.forEach(monster => {
         const card = document.createElement('div');
-        card.className = 'monster-card';
+        card.className = `monster-card ${monster.status}`;
+        card.dataset.monsterId = monster.id;
+
+        // Gerar os skulls para o nível de perigo
+        const dangerSkulls = generateDangerSkulls(monster.dangerLevel || 3);
+
+        // Determinar ícone e texto de status
+        const statusInfo = getStatusInfo(monster.status);
+
         card.innerHTML = `
-      <div class="monster-icon">${monster.icon}</div>
-      <div class="monster-info">
-        <div class="monster-name">${monster.name}</div>
-        <div class="monster-type">${monster.type} • Fraqueza: ${monster.weakness}</div>
-      </div>
-      <div class="monster-status ${monster.defeated ? 'defeated' : 'locked'}">
-        ${monster.defeated ? '✓' : '🔒'}
-      </div>
-    `;
+            <div class="monster-icon">${monster.icon}</div>
+            <div class="monster-info">
+                <div class="monster-name">${monster.name}</div>
+                <div class="monster-type">${monster.type}</div>
+                <div class="monster-danger">${dangerSkulls}</div>
+            </div>
+            <div class="monster-status ${monster.status}">
+                <span class="status-icon">${statusInfo.icon}</span>
+                <span class="status-text">${statusInfo.text}</span>
+            </div>
+        `;
+
+        // Adicionar evento de clique para abrir detalhes
+        card.addEventListener('click', () => showMonsterDetails(monster.id));
+
         list.appendChild(card);
     });
+}
+
+// Gerar skulls para indicar nível de perigo
+function generateDangerSkulls(level) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        html += `<span class="skull ${i <= level ? 'active' : ''}">💀</span>`;
+    }
+    return html;
+}
+
+// Obter informações de status
+function getStatusInfo(status) {
+    switch (status) {
+        case 'defeated':
+            return { icon: '✓', text: 'Derrotado' };
+        case 'encountered':
+            return { icon: '👁️', text: 'Encontrado' };
+        case 'studied':
+            return { icon: '📚', text: 'Estudado' };
+        default:
+            return { icon: '❓', text: 'Desconhecido' };
+    }
+}
+
+// Mostrar detalhes do monstro
+function showMonsterDetails(monsterId) {
+    const monster = GameData.bestiary.find(m => m.id === monsterId);
+    if (!monster) return;
+
+    const overlay = document.getElementById('monster-detail-overlay');
+    if (!overlay) return;
+
+    // Atualizar ícone e nome
+    document.getElementById('detail-icon').textContent = monster.icon;
+    document.getElementById('detail-name').textContent = monster.name;
+    document.getElementById('detail-type').textContent = monster.type;
+
+    // Atualizar nível de perigo (skulls)
+    const dangerLevel = monster.dangerLevel || 3;
+    let skullsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+        skullsHtml += i <= dangerLevel ? '💀' : '🖤';
+    }
+    document.getElementById('detail-skulls').textContent = skullsHtml;
+
+    // Atualizar status badge
+    const statusDiv = document.getElementById('detail-status');
+    const statusInfo = getStatusInfo(monster.status);
+    const statusBadgeClass = monster.status || 'unknown';
+    statusDiv.innerHTML = `
+        <span class="status-badge ${statusBadgeClass}">${statusInfo.icon} ${statusInfo.text}</span>
+    `;
+
+    // Atualizar lore
+    document.getElementById('detail-lore').textContent = monster.lore || 'Informações não disponíveis.';
+
+    // Atualizar fraquezas
+    const weaknessesDiv = document.getElementById('detail-weaknesses');
+    if (monster.weaknesses && monster.weaknesses.length > 0) {
+        weaknessesDiv.innerHTML = monster.weaknesses.map(w => `
+            <div class="weakness-item">
+                <div class="weakness-icon">⚔️</div>
+                <div class="weakness-content">
+                    <div class="weakness-name">${w.item}</div>
+                    <div class="weakness-desc">${w.description}</div>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        weaknessesDiv.innerHTML = '<p style="color: #666;">Informações não disponíveis</p>';
+    }
+
+    // Atualizar imunidades
+    const immunitiesDiv = document.getElementById('detail-immunities');
+    if (monster.immunities && monster.immunities.length > 0) {
+        immunitiesDiv.innerHTML = monster.immunities.map(i => `
+            <span class="immunity-tag">🛡️ ${i}</span>
+        `).join('');
+    } else {
+        immunitiesDiv.innerHTML = '<span class="immunity-tag">Nenhuma conhecida</span>';
+    }
+
+    // Atualizar dicas
+    document.getElementById('detail-tips').textContent = monster.tips || 'Nenhuma dica disponível.';
+
+    // Atualizar estatísticas
+    document.getElementById('detail-encounters').textContent = monster.encounterCount || 0;
+
+    // Marcar como estudado se estava desconhecido
+    if (monster.status === 'unknown') {
+        monster.status = 'studied';
+    }
+
+    // Mostrar o overlay
+    overlay.classList.add('visible');
+
+    console.log(`📖 Abrindo detalhes: ${monster.name}`);
+}
+
+// Fechar detalhes do monstro
+function hideMonsterDetails() {
+    const overlay = document.getElementById('monster-detail-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+    }
+    // Atualizar a lista para refletir mudanças de status
+    renderBestiary();
 }
 
 // ============================================
@@ -624,7 +896,10 @@ AFRAME.registerComponent('ar-monster', {
 
         // Marcar como derrotado no bestiário
         const monster = GameData.bestiary.find(m => m.id === this.data.type);
-        if (monster) monster.defeated = true;
+        if (monster) {
+            monster.status = 'defeated';
+            monster.encounterCount++;
+        }
 
         // Adicionar ao diário
         addDiaryEntry(`Derrotou um ${this.data.type}`);
@@ -1917,6 +2192,25 @@ document.addEventListener('DOMContentLoaded', () => {
             GameData.currentTab = tab.dataset.tab;
             renderInventoryFull();
         });
+    });
+
+    // Bestiary filters
+    document.querySelectorAll('.bestiary-filter').forEach(filter => {
+        filter.addEventListener('click', () => {
+            document.querySelectorAll('.bestiary-filter').forEach(f => f.classList.remove('active'));
+            filter.classList.add('active');
+            renderBestiary(filter.dataset.filter);
+        });
+    });
+
+    // Monster detail close button
+    document.getElementById('monster-detail-close')?.addEventListener('click', hideMonsterDetails);
+
+    // Close monster detail when clicking overlay background
+    document.getElementById('monster-detail-overlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'monster-detail-overlay') {
+            hideMonsterDetails();
+        }
     });
 
     // Profile name
