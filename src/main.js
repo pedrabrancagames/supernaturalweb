@@ -1159,7 +1159,7 @@ AFRAME.registerComponent('ar-monster', {
         // Mapa de escalas para cada monstro
         const scaleMap = {
             werewolf: '2 2 2',
-            vampire: '1 1 1',
+            vampire: '2 2 2',
             ghost: '2 2 2',
             demon: '2 2 2'
         };
@@ -1539,12 +1539,16 @@ AFRAME.registerComponent('ar-monster', {
         const originalColor = this.el.getAttribute('material')?.color || '#ffffff';
         this.el.setAttribute('material', 'emissive', isWeakness ? '#ffff00' : '#ff0000');
 
-        // Pequeno knockback
+        // Guardar posição original para restaurar após efeito
         const pos = this.el.getAttribute('position');
+        const originalPos = { x: pos.x, y: pos.y, z: pos.z };
+
+        // Pequeno efeito de escala (shake) em vez de mover posição
+        // Isso evita o bug de o monstro subir continuamente
         this.el.setAttribute('animation__hit', {
-            property: 'position',
-            from: `${pos.x} ${pos.y} ${pos.z}`,
-            to: `${pos.x} ${pos.y + 0.2} ${pos.z}`,
+            property: 'scale',
+            from: this.el.getAttribute('scale'),
+            to: { x: pos.x * 1.1, y: pos.y * 1.1, z: pos.z * 1.1 },
             dur: 100,
             dir: 'alternate',
             easing: 'easeOutQuad'
@@ -1553,6 +1557,8 @@ AFRAME.registerComponent('ar-monster', {
         setTimeout(() => {
             this.el.setAttribute('material', 'emissive', '#000000');
             this.el.removeAttribute('animation__hit');
+            // Garantir que a posição está correta
+            this.el.setAttribute('position', originalPos);
         }, 200);
     },
 
@@ -1899,9 +1905,9 @@ AFRAME.registerSystem('monster-spawner', {
         const allLootTypes = [
             { id: 'holy_water', icon: '', name: 'Água Benta', category: 'weapons', damage: 10, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
             { id: 'salt', icon: '', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
-            { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 15, model: 'knife-model', scale: '0.6 0.6 0.6' },
+            { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 15, model: 'knife-model', scale: '0.3 0.3 0.3' },
             { id: 'shotgun', icon: '', name: 'Espingarda', category: 'weapons', damage: 20, model: 'shotgun-model', scale: '0.5 0.5 0.5' },
-            { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '0.5 0.5 0.5' },
+            { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '1.5 1.5 1.5' },
             { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 50, model: 'colt-model', scale: '0.3 0.3 0.3' },
             { id: 'devil_trap', icon: '', name: 'Selo da Armadilha', category: 'weapons', damage: 0, model: 'selo-model', scale: '0.5 0.5 0.5' },
             { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '0.1 0.1 0.1' },
