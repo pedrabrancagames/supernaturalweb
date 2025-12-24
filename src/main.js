@@ -776,6 +776,11 @@ AFRAME.registerComponent('ar-monster', {
         maxHp: { type: 'number', default: 100 }
     },
 
+    // Estados possíveis: normal, trapped, burning, vulnerable, dying, dead
+    monsterState: 'normal',
+    comboTimer: null,
+    burnTimer: null,
+
     init: function () {
         const modelMap = {
             werewolf: '#werewolf-model',
@@ -794,11 +799,14 @@ AFRAME.registerComponent('ar-monster', {
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
         this.el.setAttribute('scale', scaleMap[this.data.type] || '1 1 1');
-        // Monstros não ficam mais rodando - removida animação de rotação
+
+        // Inicializar estado
+        this.monsterState = 'normal';
+        this.comboTimer = null;
+        this.burnTimer = null;
 
         // Fantasmas começam invisíveis - precisam da Filmadora para serem vistos
         if (this.data.type === 'ghost') {
-            // Verificar se a filmadora está equipada
             const hasCamera = GameData.equipped.accessory?.id === 'camera';
             this.el.setAttribute('visible', hasCamera);
             if (!hasCamera) {
@@ -806,17 +814,16 @@ AFRAME.registerComponent('ar-monster', {
             }
 
             // Configurar movimento circular e levitação para o fantasma
-            this.ghostOrbitAngle = Math.random() * Math.PI * 2; // Ângulo inicial aleatório
-            this.ghostOrbitSpeed = 0.3 + Math.random() * 0.2; // Velocidade de órbita
-            this.ghostHoverOffset = 0; // Offset para levitação
-            this.ghostOrbitRadius = 2 + Math.random(); // Raio da órbita
+            this.ghostOrbitAngle = Math.random() * Math.PI * 2;
+            this.ghostOrbitSpeed = 0.3 + Math.random() * 0.2;
+            this.ghostHoverOffset = 0;
+            this.ghostOrbitRadius = 2 + Math.random();
 
-            // Animação de levitação suave (balanço vertical)
             const pos = this.el.getAttribute('position');
-            this.ghostBaseY = pos.y + 0.5; // Flutuar acima do chão
+            this.ghostBaseY = pos.y + 0.5;
             this.el.setAttribute('position', { x: pos.x, y: this.ghostBaseY, z: pos.z });
 
-            console.log(`👻 Fantasma spawnado - Visível: ${hasCamera} - Com movimento orbital`);
+            console.log(`👻 Fantasma spawnado - Visível: ${hasCamera}`);
         }
 
         const combatSystem = this.el.sceneEl.systems['combat'];
@@ -827,63 +834,136 @@ AFRAME.registerComponent('ar-monster', {
 
     tick: function (time, deltaTime) {
         // Movimento circular e levitação apenas para fantasmas
-        if (this.data.type !== 'ghost') return;
-        if (!deltaTime) return;
+        if (this.data.type === 'ghost') {
+            if (!deltaTime) return;
 
-        const dt = deltaTime / 1000; // Converter para segundos
-        const camera = document.getElementById('camera');
-        if (!camera) return;
+            const dt = deltaTime / 1000;
+            const camera = document.getElementById('camera');
+            if (!camera) return;
 
-        const cameraPos = camera.getAttribute('position');
+            // Se está preso, não se move
+            if (this.monsterState === 'trapped') return;
 
-        // Atualizar ângulo de órbita
-        this.ghostOrbitAngle += this.ghostOrbitSpeed * dt;
+            const cameraPos = camera.getAttribute('position');
 
-        // Calcular nova posição orbital ao redor do jogador
-        const newX = cameraPos.x + Math.cos(this.ghostOrbitAngle) * this.ghostOrbitRadius;
-        const newZ = cameraPos.z + Math.sin(this.ghostOrbitAngle) * this.ghostOrbitRadius;
+            this.ghostOrbitAngle += this.ghostOrbitSpeed * dt;
+            const newX = cameraPos.x + Math.cos(this.ghostOrbitAngle) * this.ghostOrbitRadius;
+            const newZ = cameraPos.z + Math.sin(this.ghostOrbitAngle) * this.ghostOrbitRadius;
 
-        // Efeito de levitação (subir e descer suavemente)
-        this.ghostHoverOffset += dt * 2;
-        const hoverY = this.ghostBaseY + Math.sin(this.ghostHoverOffset) * 0.3;
+            this.ghostHoverOffset += dt * 2;
+            const hoverY = this.ghostBaseY + Math.sin(this.ghostHoverOffset) * 0.3;
 
-        // Aplicar nova posição
-        this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
+            this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
 
-        // Fazer o fantasma olhar para o jogador
-        const angleToPlayer = Math.atan2(cameraPos.x - newX, cameraPos.z - newZ) * (180 / Math.PI);
-        this.el.setAttribute('rotation', { x: 0, y: angleToPlayer, z: 0 });
+            const angleToPlayer = Math.atan2(cameraPos.x - newX, cameraPos.z - newZ) * (180 / Math.PI);
+            this.el.setAttribute('rotation', { x: 0, y: angleToPlayer, z: 0 });
+        }
+
+        // Animação de tremida para monstros presos
+        if (this.monsterState === 'trapped') {
+            const shake = Math.sin(time * 0.02) * 0.05;
+            const currentPos = this.el.getAttribute('position');
+            this.el.setAttribute('position', { x: currentPos.x + shake, y: currentPos.y, z: currentPos.z });
+        }
+
+        // Animação de queimando
+        if (this.monsterState === 'burning') {
+            const flicker = 0.8 + Math.random() * 0.4;
+            this.el.setAttribute('material', 'emissive', `#ff${Math.floor(flicker * 50).toString(16)}00`);
+        }
     },
 
+    // Processar ataque e combos
     takeDamage: function (amount, weaponId) {
         const weapon = GameData.inventory.weapons.find(w => w.id === weaponId);
         let actualDamage = amount;
         let isWeakness = false;
         let isImmune = false;
         let immuneReason = '';
+        let comboTriggered = false;
+        let comboMessage = '';
+        let stateChanged = false;
+        let newState = '';
 
-        // Verificar se a arma é efetiva contra este monstro
-        if (weapon && weapon.weakness && weapon.weakness.length > 0) {
-            if (weapon.weakness.includes(this.data.type)) {
-                // Arma é fraqueza do monstro - DANO CRÍTICO!
-                actualDamage = amount * 2;
-                isWeakness = true;
-            } else {
-                // Arma tem fraquezas definidas mas este monstro não está na lista
-                // O monstro é IMUNE a esta arma
+        // Verificar mecânicas especiais baseadas no tipo de monstro e arma
+        const comboResult = this.checkComboMechanics(weapon);
+
+        if (comboResult.requiresCombo) {
+            // Este monstro requer mecânica de combo
+            if (comboResult.comboStep === 1) {
+                // Primeiro passo do combo
+                this.setState(comboResult.nextState);
+                stateChanged = true;
+                newState = comboResult.nextState;
+                comboMessage = comboResult.message;
                 actualDamage = 0;
+
+                // Timer para resetar o estado se não completar o combo
+                if (comboResult.comboTimeout) {
+                    this.comboTimer = setTimeout(() => {
+                        if (this.monsterState === comboResult.nextState) {
+                            this.setState('normal');
+                            showComboFeedback('⏱️ Combo expirou!', 'expired');
+                        }
+                    }, comboResult.comboTimeout);
+                }
+            } else if (comboResult.comboStep === 2) {
+                // Segundo passo do combo - verificar se está no estado correto
+                if (this.monsterState === comboResult.requiredState) {
+                    // Combo completo!
+                    comboTriggered = true;
+                    comboMessage = comboResult.message;
+                    actualDamage = comboResult.comboDamage || amount * 3;
+                    isWeakness = true;
+
+                    // Limpar timer
+                    if (this.comboTimer) {
+                        clearTimeout(this.comboTimer);
+                        this.comboTimer = null;
+                    }
+
+                    // Efeito especial para Wendigo (queimando)
+                    if (this.data.type === 'wendigo') {
+                        this.setState('burning');
+                        stateChanged = true;
+                        newState = 'burning';
+                        this.startBurning();
+                    }
+                } else {
+                    // Não está no estado certo para o combo
+                    isImmune = true;
+                    immuneReason = comboResult.wrongStateMessage || 'Complete o primeiro passo do combo!';
+                    actualDamage = 0;
+                }
+            } else if (comboResult.blocked) {
+                // Ataque bloqueado (bruxa com sacos, etc)
                 isImmune = true;
-                immuneReason = this.getImmunityMessage(this.data.type, weapon);
+                immuneReason = comboResult.message;
+                actualDamage = 0;
             }
-        } else if (weapon && (!weapon.weakness || weapon.weakness.length === 0)) {
-            // Arma genérica (como mão ou faca sem fraqueza) - dano reduzido
-            actualDamage = Math.floor(amount * 0.5);
+        } else {
+            // Sistema de fraquezas normal
+            if (weapon && weapon.weakness && weapon.weakness.length > 0) {
+                if (weapon.weakness.includes(this.data.type)) {
+                    actualDamage = amount * 2;
+                    isWeakness = true;
+                } else {
+                    actualDamage = 0;
+                    isImmune = true;
+                    immuneReason = this.getImmunityMessage(this.data.type, weapon);
+                }
+            } else if (weapon && (!weapon.weakness || weapon.weakness.length === 0)) {
+                actualDamage = Math.floor(amount * 0.5);
+            }
         }
 
         // Aplicar dano apenas se não for imune
-        if (!isImmune) {
+        if (!isImmune && actualDamage > 0) {
             this.data.hp -= actualDamage;
             updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
+
+            // Efeito de hit no monstro
+            this.playHitEffect(isWeakness);
 
             if (this.data.hp <= 0) {
                 this.die();
@@ -907,19 +987,215 @@ AFRAME.registerComponent('ar-monster', {
             isWeakness,
             isImmune,
             immuneReason,
+            comboTriggered,
+            comboMessage,
+            stateChanged,
+            newState,
             monsterName: monsterNames[this.data.type] || this.data.type,
             remainingHp: this.data.hp
         };
     },
 
+    // Verificar mecânicas de combo específicas
+    checkComboMechanics: function (weapon) {
+        if (!weapon) return { requiresCombo: false };
+
+        const type = this.data.type;
+        const weaponId = weapon.id;
+
+        // DEMÔNIO: Armadilha → Bíblia
+        if (type === 'demon' || type === 'crossroads_demon') {
+            if (weaponId === 'devil_trap') {
+                return {
+                    requiresCombo: true,
+                    comboStep: 1,
+                    nextState: 'trapped',
+                    message: '⛧ Demônio preso na armadilha!',
+                    comboTimeout: 15000 // 15 segundos para completar
+                };
+            }
+            if (weaponId === 'bible') {
+                return {
+                    requiresCombo: true,
+                    comboStep: 2,
+                    requiredState: 'trapped',
+                    message: '📖 EXORCISMO COMPLETO!',
+                    comboDamage: 500, // Mata instantaneamente
+                    wrongStateMessage: 'Prenda o demônio primeiro com a Armadilha!'
+                };
+            }
+        }
+
+        // WENDIGO: Molotov → Isqueiro
+        if (type === 'wendigo') {
+            if (weaponId === 'molotov') {
+                return {
+                    requiresCombo: true,
+                    comboStep: 1,
+                    nextState: 'vulnerable',
+                    message: '🧴 Wendigo coberto de líquido inflamável!',
+                    comboTimeout: 10000 // 10 segundos
+                };
+            }
+            if (weaponId === 'lighter') {
+                return {
+                    requiresCombo: true,
+                    comboStep: 2,
+                    requiredState: 'vulnerable',
+                    message: '🔥 WENDIGO EM CHAMAS!',
+                    comboDamage: 300,
+                    wrongStateMessage: 'Jogue o Molotov primeiro!'
+                };
+            }
+        }
+
+        // VAMPIRO: Faca com sangue → Estaca
+        if (type === 'vampire') {
+            if (weaponId === 'blood_knife' && this.data.hp <= 30) {
+                return {
+                    requiresCombo: true,
+                    comboStep: 1,
+                    nextState: 'vulnerable',
+                    message: '🩸 Vampiro enfraquecido! Use a estaca!',
+                    comboTimeout: 8000
+                };
+            }
+            if (weaponId === 'wooden_stake') {
+                if (this.monsterState === 'vulnerable') {
+                    return {
+                        requiresCombo: true,
+                        comboStep: 2,
+                        requiredState: 'vulnerable',
+                        message: '🪵 ESTACA NO CORAÇÃO!',
+                        comboDamage: 500,
+                        wrongStateMessage: 'Enfraqueça o vampiro primeiro!'
+                    };
+                }
+            }
+        }
+
+        return { requiresCombo: false };
+    },
+
+    // Mudar estado do monstro
+    setState: function (newState) {
+        const oldState = this.monsterState;
+        this.monsterState = newState;
+
+        console.log(`🔄 ${this.data.type}: ${oldState} → ${newState}`);
+
+        // Aplicar efeitos visuais do estado
+        this.applyStateVisuals(newState);
+    },
+
+    // Aplicar efeitos visuais baseados no estado
+    applyStateVisuals: function (state) {
+        // Remover efeitos anteriores
+        this.el.removeAttribute('animation__trapped');
+        this.el.removeAttribute('animation__burning');
+
+        switch (state) {
+            case 'trapped':
+                // Efeito de tremida e brilho vermelho
+                this.el.setAttribute('animation__trapped', {
+                    property: 'rotation',
+                    from: '0 0 -5',
+                    to: '0 0 5',
+                    dur: 100,
+                    loop: true,
+                    dir: 'alternate',
+                    easing: 'easeInOutSine'
+                });
+                // Mostrar indicador visual
+                showStateIndicator('⛧ PRESO', 'trapped');
+                break;
+
+            case 'vulnerable':
+                // Efeito de piscando
+                this.el.setAttribute('animation__vulnerable', {
+                    property: 'visible',
+                    from: true,
+                    to: false,
+                    dur: 200,
+                    loop: true,
+                    dir: 'alternate'
+                });
+                showStateIndicator('💀 VULNERÁVEL', 'vulnerable');
+                break;
+
+            case 'burning':
+                // Efeito de escala pulsando (como se estivesse queimando)
+                this.el.setAttribute('animation__burning', {
+                    property: 'scale',
+                    from: '2 2 2',
+                    to: '2.2 2.2 2.2',
+                    dur: 150,
+                    loop: true,
+                    dir: 'alternate',
+                    easing: 'easeInOutSine'
+                });
+                showStateIndicator('🔥 QUEIMANDO', 'burning');
+                break;
+
+            case 'normal':
+                hideStateIndicator();
+                break;
+        }
+    },
+
+    // Efeito de queimando contínuo (para Wendigo)
+    startBurning: function () {
+        let burnTicks = 0;
+        const burnDamage = 20;
+
+        this.burnTimer = setInterval(() => {
+            burnTicks++;
+            this.data.hp -= burnDamage;
+            updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
+
+            // Feedback de dano de fogo
+            showHitFeedback(true, burnDamage, false, false, '', true);
+
+            if (this.data.hp <= 0 || burnTicks >= 5) {
+                clearInterval(this.burnTimer);
+                this.burnTimer = null;
+                if (this.data.hp <= 0) {
+                    this.die();
+                }
+            }
+        }, 500);
+    },
+
+    // Efeito visual de hit no monstro
+    playHitEffect: function (isWeakness) {
+        // Flash branco/vermelho no monstro
+        const originalColor = this.el.getAttribute('material')?.color || '#ffffff';
+        this.el.setAttribute('material', 'emissive', isWeakness ? '#ffff00' : '#ff0000');
+
+        // Pequeno knockback
+        const pos = this.el.getAttribute('position');
+        this.el.setAttribute('animation__hit', {
+            property: 'position',
+            from: `${pos.x} ${pos.y} ${pos.z}`,
+            to: `${pos.x} ${pos.y + 0.2} ${pos.z}`,
+            dur: 100,
+            dir: 'alternate',
+            easing: 'easeOutQuad'
+        });
+
+        setTimeout(() => {
+            this.el.setAttribute('material', 'emissive', '#000000');
+            this.el.removeAttribute('animation__hit');
+        }, 200);
+    },
+
     getImmunityMessage: function (monsterType, weapon) {
-        // Mensagens personalizadas baseadas no tipo de monstro e arma
         const messages = {
             werewolf: `Lobisomens só recebem dano de prata!`,
             vampire: `Vampiros precisam de sangue de morto ou estaca!`,
             ghost: `Fantasmas são imunes! Use ferro ou sal!`,
-            demon: `Demônios resistem a isso! Use água benta ou armadilha!`,
-            wendigo: `Wendigos só morrem com fogo!`,
+            demon: `Demônios resistem a isso! Use a Armadilha + Bíblia!`,
+            wendigo: `Wendigos só morrem com fogo! Use Molotov + Isqueiro!`,
             hellhound: `Cães do Inferno só temem a Lâmina de Anjo!`,
             witch: `Destrua os sacos de maldição primeiro!`,
             crossroads_demon: `Use a Armadilha do Diabo!`
@@ -928,6 +1204,12 @@ AFRAME.registerComponent('ar-monster', {
     },
 
     die: function () {
+        this.monsterState = 'dead';
+
+        // Limpar timers
+        if (this.comboTimer) clearTimeout(this.comboTimer);
+        if (this.burnTimer) clearInterval(this.burnTimer);
+
         this.el.setAttribute('animation__death', {
             property: 'scale',
             to: '0 0 0',
@@ -952,6 +1234,9 @@ AFRAME.registerComponent('ar-monster', {
 
         // Adicionar ao diário
         addDiaryEntry(`Derrotou um ${this.data.type}`);
+
+        // Esconder indicador de estado
+        hideStateIndicator();
 
         setTimeout(() => {
             this.el.parentNode.removeChild(this.el);
@@ -1521,6 +1806,74 @@ function showHitFeedback(hit, damage = 0, isWeakness = false, isImmune = false, 
             feedback.className = 'ar-hit-feedback';
         }, 300);
     }
+}
+
+// Feedback de combo
+function showComboFeedback(message, type = 'success') {
+    const feedback = document.getElementById('ar-hit-feedback');
+    if (!feedback) return;
+
+    feedback.textContent = message;
+    feedback.className = `ar-hit-feedback combo-${type}`;
+
+    // Vibrar para combos
+    if (navigator.vibrate) {
+        if (type === 'success') {
+            navigator.vibrate([100, 50, 100, 50, 100]);
+        } else {
+            navigator.vibrate([200, 100, 200]);
+        }
+    }
+
+    setTimeout(() => {
+        feedback.className = 'ar-hit-feedback';
+    }, 2500);
+}
+
+// Indicador de estado do monstro
+function showStateIndicator(text, stateType) {
+    let indicator = document.getElementById('monster-state-indicator');
+
+    if (!indicator) {
+        // Criar indicador se não existir
+        indicator = document.createElement('div');
+        indicator.id = 'monster-state-indicator';
+        indicator.className = 'monster-state-indicator';
+        document.getElementById('ar-hud')?.appendChild(indicator);
+    }
+
+    indicator.textContent = text;
+    indicator.className = `monster-state-indicator ${stateType} visible`;
+}
+
+function hideStateIndicator() {
+    const indicator = document.getElementById('monster-state-indicator');
+    if (indicator) {
+        indicator.classList.remove('visible');
+    }
+}
+
+// Efeito de tela vermelha quando o jogador recebe dano
+function showPlayerDamageEffect() {
+    let damageOverlay = document.getElementById('player-damage-overlay');
+
+    if (!damageOverlay) {
+        damageOverlay = document.createElement('div');
+        damageOverlay.id = 'player-damage-overlay';
+        damageOverlay.className = 'player-damage-overlay';
+        document.getElementById('ar-hud')?.appendChild(damageOverlay);
+    }
+
+    damageOverlay.classList.add('active');
+
+    // Vibrar
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
+
+    setTimeout(() => {
+        damageOverlay.classList.remove('active');
+    }, 300);
 }
 
 /**
@@ -2329,7 +2682,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (combat) {
             const result = combat.fire();
-            showHitFeedback(result.hit, result.damage, result.isWeakness, result.isImmune, result.immuneReason);
+
+            // Verificar se é um combo ativado
+            if (result.comboTriggered || result.stateChanged) {
+                showComboFeedback(result.comboMessage, 'success');
+            } else {
+                showHitFeedback(result.hit, result.damage, result.isWeakness, result.isImmune, result.immuneReason);
+            }
         }
     });
 
