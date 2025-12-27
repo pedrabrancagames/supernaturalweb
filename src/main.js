@@ -29,7 +29,7 @@ const GameData = {
             { id: 'crowbar', name: 'Barra de Ferro', icon: '', iconPath: '/images/icon-ferro.png', quantity: 0, damage: 30, weakness: ['ghost'], image: '/images/bg-ferro.png' },
             { id: 'colt', name: 'Colt', icon: '', iconPath: '/images/icon-colt.png', quantity: 0, damage: 50, weakness: ['demon', 'vampire', 'werewolf'], image: '/images/bg-colt.png', ammo: 'silver' },
             { id: 'devil_trap', name: 'Selo da Armadilha', icon: '', iconPath: '/images/icon-selo.png', quantity: 0, damage: 0, weakness: ['demon'], image: '/images/bg-pentagrama.png', special: 'trap' },
-            { id: 'bible', name: 'Bíblia', icon: '', iconPath: '/images/icon-biblia.png', quantity: 0, damage: 100, weakness: ['demon'], image: '/images/bg-biblia.png', special: 'exorcism' },
+            { id: 'bible', name: 'Bíblia', icon: '', iconPath: '/images/icon-bible.png', quantity: 0, damage: 100, weakness: ['demon'], image: '/images/bg-bible.png', special: 'exorcism' },
             { id: 'angel_blade', name: 'Lâmina de Anjo', icon: '', iconPath: '/images/icon-lamina-anjo.png', quantity: 0, damage: 80, weakness: ['demon', 'hellhound'], image: '/images/bg-faca-anjo.png' },
             { id: 'blood_knife', name: 'Faca com Sangue', icon: '', iconPath: '/images/icon-faca-morto.png', quantity: 0, damage: 40, weakness: ['vampire'], image: '/images/bg-faca-morto.png' },
             { id: 'wooden_stake', name: 'Estaca de Madeira', icon: '', iconPath: '/images/icon-estaca.png', quantity: 0, damage: 100, weakness: ['vampire'], image: '/images/bg-estaca.png', special: 'finisher' },
