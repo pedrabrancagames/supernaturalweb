@@ -68,7 +68,8 @@ input {
    ======================================== */
 #screen-splash {
   background: #000000 url('/images/bg-load.jpg') no-repeat center center;
-  /* Imagem sem redimensionar, tamanho original */
+  background-size: cover;
+  /* Imagem redimensionada para cobrir a tela */
   justify-content: center;
   align-items: center;
 }
