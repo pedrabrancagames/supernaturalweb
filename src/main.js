@@ -1157,14 +1157,14 @@ AFRAME.registerComponent('ar-monster', {
             wendigo: '#wendigo-model'
         };
 
-        // Mapa de escalas para cada monstro (escala original +25%)
-        // Escalas originais dos modelos GLB para modo AR
+        // Mapa de escalas para cada monstro (+150% para ficarem bem visíveis)
+        // Escalas maiores para melhor visualização no modo AR
         const scaleMap = {
-            werewolf: '1.25 1.25 1.25',
-            vampire: '1.25 1.25 1.25',
-            ghost: '1.25 1.25 1.25',
-            demon: '1.25 1.25 1.25',
-            wendigo: '1.25 1.25 1.25'
+            werewolf: '2.5 2.5 2.5',
+            vampire: '2.5 2.5 2.5',
+            ghost: '2.5 2.5 2.5',
+            demon: '2.5 2.5 2.5',
+            wendigo: '2.5 2.5 2.5'
         };
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
@@ -1497,8 +1497,8 @@ AFRAME.registerComponent('ar-monster', {
                 // Efeito de escala pulsando (como se estivesse queimando)
                 this.el.setAttribute('animation__burning', {
                     property: 'scale',
-                    from: '1.25 1.25 1.25',
-                    to: '1.4 1.4 1.4',
+                    from: '2.5 2.5 2.5',
+                    to: '2.7 2.7 2.7',
                     dur: 150,
                     loop: true,
                     dir: 'alternate',
