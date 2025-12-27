@@ -409,15 +409,20 @@ input {
   justify-content: center;
   gap: 20px;
   padding: 15px;
-  background: #0a0a0a;
+  background: url('/images/bg-base.jpg') no-repeat center center;
+  background-size: cover;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: #888;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6e1dc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .dot {
