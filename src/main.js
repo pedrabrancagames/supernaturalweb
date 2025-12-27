@@ -1153,16 +1153,18 @@ AFRAME.registerComponent('ar-monster', {
             werewolf: '#werewolf-model',
             vampire: '#vampire-model',
             ghost: '#ghost-model',
-            demon: '#demon-model'
+            demon: '#demon-model',
+            wendigo: '#wendigo-model'
         };
 
-        // Mapa de escalas para cada monstro
+        // Mapa de escalas para cada monstro (escala original +25%)
         // Escalas originais dos modelos GLB para modo AR
         const scaleMap = {
-            werewolf: '1 1 1',
-            vampire: '1 1 1',
-            ghost: '1 1 1',
-            demon: '1 1 1'
+            werewolf: '1.25 1.25 1.25',
+            vampire: '1.25 1.25 1.25',
+            ghost: '1.25 1.25 1.25',
+            demon: '1.25 1.25 1.25',
+            wendigo: '1.25 1.25 1.25'
         };
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
@@ -1495,8 +1497,8 @@ AFRAME.registerComponent('ar-monster', {
                 // Efeito de escala pulsando (como se estivesse queimando)
                 this.el.setAttribute('animation__burning', {
                     property: 'scale',
-                    from: '1 1 1',
-                    to: '1.1 1.1 1.1',
+                    from: '1.25 1.25 1.25',
+                    to: '1.4 1.4 1.4',
                     dur: 150,
                     loop: true,
                     dir: 'alternate',
@@ -1798,7 +1800,7 @@ AFRAME.registerSystem('monster-spawner', {
         this.autoSpawnEnabled = true;
         this.spawnInterval = null;
         this.lootSpawnInterval = null;
-        this.maxMonsters = 3;
+        this.maxMonsters = 1;  // Apenas um monstro por vez
         this.maxLoot = 5;
 
         this.el.sceneEl.addEventListener('loaded', () => {
@@ -1879,10 +1881,10 @@ AFRAME.registerSystem('monster-spawner', {
     spawnMonster: function (type = null) {
         const position = this.getSpawnPosition();
 
-        const types = ['werewolf', 'vampire', 'ghost', 'demon'];
+        const types = ['werewolf', 'vampire', 'ghost', 'demon', 'wendigo'];
         const monsterType = type || types[Math.floor(Math.random() * types.length)];
 
-        const hpMap = { werewolf: 100, vampire: 80, ghost: 60, demon: 120 };
+        const hpMap = { werewolf: 100, vampire: 80, ghost: 60, demon: 120, wendigo: 150 };
 
         const monster = document.createElement('a-entity');
         monster.setAttribute('ar-monster', {
@@ -2047,14 +2049,8 @@ AFRAME.registerComponent('ar-loot', {
             to: `${pos.x} ${pos.y + 0.15} ${pos.z}`
         });
 
-        // Animação de rotação
-        this.el.setAttribute('animation__rotate', {
-            property: 'rotation',
-            to: '0 360 0',
-            loop: true,
-            dur: 4000,
-            easing: 'linear'
-        });
+        // Removida animação de rotação para manter itens parados
+        // Os itens agora só flutuam suavemente para cima e para baixo
 
         // Cores por raridade
         const rarityColors = {
