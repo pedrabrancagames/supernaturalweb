@@ -67,7 +67,8 @@ input {
    SPLASH SCREEN
    ======================================== */
 #screen-splash {
-  background: linear-gradient(180deg, #1a0505 0%, #0a0a0a 50%, #050510 100%);
+  background: #000000 url('/images/bg-load.jpg') no-repeat center center;
+  /* Imagem sem redimensionar, tamanho original */
   justify-content: center;
   align-items: center;
 }
