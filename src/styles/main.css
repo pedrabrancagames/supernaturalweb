@@ -369,6 +369,11 @@ input {
 /* ========================================
    MAP SCREEN
    ======================================== */
+#screen-map {
+  background: #0a0a0a url('/images/bg-base.jpg') no-repeat center center;
+  background-size: cover;
+}
+
 .map-container {
   flex: 1;
   background: #111;
