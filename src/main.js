@@ -1819,18 +1819,8 @@ AFRAME.registerComponent('ar-monster', {
             this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
         }
 
-        // TODOS os monstros olham para o jogador
-        if (this.monsterState !== 'dead') {
-            // Usar lookAt do Three.js para rotação mais robusta
-            // Criar vetor alvo na mesma altura do monstro para evitar inclinação (apenas rotação Y)
-            const targetPos = new THREE.Vector3(cameraPos.x, this.el.object3D.position.y, cameraPos.z);
-            this.el.object3D.lookAt(targetPos);
-
-            // Aplicar offset de rotação (se necessário)
-            if (this.rotationOffset) {
-                this.el.object3D.rotateY(THREE.MathUtils.degToRad(this.rotationOffset));
-            }
-        }
+        // Funcionalidade de olhar para o jogador desativada temporariamente
+        // if (this.monsterState !== 'dead') { ... }
 
         // Animação de tremida para monstros presos
         if (this.monsterState === 'trapped') {
@@ -2447,13 +2437,6 @@ AFRAME.registerSystem('monster-spawner', {
         setTimeout(() => {
             this.spawnMonster();
             this.spawnLoot();
-            // Atualizar marcadores do minimapa após spawn inicial
-            if (typeof updateMinimapMarkers === 'function') updateMinimapMarkers();
-        }, 2000);
-
-        // Atualizar minimapa periodicamente (a cada 2 segundos)
-        this.minimapInterval = setInterval(() => {
-            if (typeof updateMinimapMarkers === 'function') updateMinimapMarkers();
         }, 2000);
 
         // Spawn de monstros a cada 30 segundos
@@ -2483,10 +2466,6 @@ AFRAME.registerSystem('monster-spawner', {
         if (this.lootSpawnInterval) {
             clearInterval(this.lootSpawnInterval);
             this.lootSpawnInterval = null;
-        }
-        if (this.minimapInterval) {
-            clearInterval(this.minimapInterval);
-            this.minimapInterval = null;
         }
     },
 
