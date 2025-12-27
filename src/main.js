@@ -2233,7 +2233,7 @@ function showMonsterHP(name, hp, maxHp) {
         vampire: '/images/icon-vampire.png',
         ghost: '/images/icon-ghost.png',
         demon: '/images/icon-demon.png',
-        wendigo: '/images/icone-wendigo.png',
+        wendigo: '/images/icon-wendigo.png',
         hellhound: '/images/icon-demon.png',
         witch: '/images/icon-ghost.png',
         crossroads_demon: '/images/icon-demon.png'
