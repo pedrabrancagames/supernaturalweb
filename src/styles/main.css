@@ -1961,10 +1961,8 @@ input {
 }
 
 .ar-slot {
-  width: 75px;
-  height: 75px;
-  width: 75px;
-  height: 75px;
+  width: 100px;
+  height: 100px;
   background: none;
   border: none;
   display: flex;
