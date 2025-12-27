@@ -1774,18 +1774,16 @@ AFRAME.registerComponent('ar-monster', {
     },
 
     tick: function (time, deltaTime) {
+        if (!deltaTime) return;
+        const dt = deltaTime / 1000;
+        const camera = document.getElementById('camera');
+        if (!camera) return;
+        const cameraPos = camera.getAttribute('position');
+
         // Movimento circular e levitação apenas para fantasmas
         if (this.data.type === 'ghost') {
-            if (!deltaTime) return;
-
-            const dt = deltaTime / 1000;
-            const camera = document.getElementById('camera');
-            if (!camera) return;
-
             // Se está preso, não se move
             if (this.monsterState === 'trapped') return;
-
-            const cameraPos = camera.getAttribute('position');
 
             this.ghostOrbitAngle += this.ghostOrbitSpeed * dt;
             const newX = cameraPos.x + Math.cos(this.ghostOrbitAngle) * this.ghostOrbitRadius;
@@ -1795,8 +1793,12 @@ AFRAME.registerComponent('ar-monster', {
             const hoverY = this.ghostBaseY + Math.sin(this.ghostHoverOffset) * 0.3;
 
             this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
+        }
 
-            const angleToPlayer = Math.atan2(cameraPos.x - newX, cameraPos.z - newZ) * (180 / Math.PI);
+        // TODOS os monstros olham para o jogador
+        if (this.monsterState !== 'dead') {
+            const currentPos = this.el.getAttribute('position');
+            const angleToPlayer = Math.atan2(cameraPos.x - currentPos.x, cameraPos.z - currentPos.z) * (180 / Math.PI);
             this.el.setAttribute('rotation', { x: 0, y: angleToPlayer, z: 0 });
         }
 
