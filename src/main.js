@@ -191,9 +191,168 @@ const GameData = {
 
     diary: [],
 
+    quests: {
+        active: [],      // Quests em andamento
+        completed: [],   // IDs das quests completadas
+        dailyReset: null // Timestamp do último reset diário
+    },
+
     currentTab: 'weapons',
     currentScreen: 'splash'
 };
+
+// ============================================
+// TEMPLATES DE QUESTS
+// ============================================
+
+const QUEST_TEMPLATES = [
+    // Tutorial
+    {
+        id: 'tutorial_01',
+        type: 'hunt',
+        title: 'Primeiro Sangue',
+        description: 'Todo caçador precisa começar em algum lugar. Derrote seu primeiro monstro.',
+        icon: '⚔️',
+        objectives: [
+            { type: 'kill', target: 'any', current: 0, required: 1, label: 'Monstro derrotado' }
+        ],
+        rewards: { xp: 50, items: [] },
+        unlocks: ['tutorial_02'],
+        prerequisite: null,
+        isDaily: false
+    },
+    {
+        id: 'tutorial_02',
+        type: 'gather',
+        title: 'Armado e Perigoso',
+        description: 'Um caçador precisa de ferramentas. Colete uma arma no mundo.',
+        icon: '🔫',
+        objectives: [
+            { type: 'collect', target: 'any_weapon', current: 0, required: 1, label: 'Arma coletada' }
+        ],
+        rewards: { xp: 25, items: [] },
+        unlocks: ['hunt_werewolf_01', 'hunt_ghost_01'],
+        prerequisite: 'tutorial_01',
+        isDaily: false
+    },
+    // Quests de Caça
+    {
+        id: 'hunt_werewolf_01',
+        type: 'hunt',
+        title: 'Lua Cheia',
+        description: 'Lobisomens foram avistados na região. Use armas de prata para eliminá-los.',
+        icon: '🐺',
+        objectives: [
+            { type: 'kill', target: 'werewolf', current: 0, required: 2, label: 'Lobisomens derrotados' }
+        ],
+        rewards: { xp: 100, items: [{ id: 'bandage', quantity: 3 }] },
+        unlocks: ['hunt_vampire_01'],
+        prerequisite: 'tutorial_02',
+        isDaily: false
+    },
+    {
+        id: 'hunt_ghost_01',
+        type: 'hunt',
+        title: 'Sussurros do Além',
+        description: 'Um espírito inquieto assombra a área. Use a Filmadora para vê-lo e ferro para dispersá-lo.',
+        icon: '👻',
+        objectives: [
+            { type: 'kill', target: 'ghost', current: 0, required: 1, label: 'Fantasma dispersado' }
+        ],
+        rewards: { xp: 75, items: [] },
+        unlocks: ['hunt_demon_01'],
+        prerequisite: 'tutorial_02',
+        isDaily: false
+    },
+    {
+        id: 'hunt_vampire_01',
+        type: 'hunt',
+        title: 'Sede de Sangue',
+        description: 'Um ninho de vampiros foi descoberto. Elimine-os com sangue de morto e estaca.',
+        icon: '🧛',
+        objectives: [
+            { type: 'kill', target: 'vampire', current: 0, required: 2, label: 'Vampiros eliminados' }
+        ],
+        rewards: { xp: 150, items: [{ id: 'medkit', quantity: 1 }] },
+        unlocks: ['story_pilot'],
+        prerequisite: 'hunt_werewolf_01',
+        isDaily: false
+    },
+    {
+        id: 'hunt_demon_01',
+        type: 'hunt',
+        title: 'Olhos Negros',
+        description: 'Um demônio está possuindo inocentes. Use a Armadilha do Diabo e exorcize-o.',
+        icon: '😈',
+        objectives: [
+            { type: 'kill', target: 'demon', current: 0, required: 1, label: 'Demônio exorcizado' }
+        ],
+        rewards: { xp: 125, items: [] },
+        unlocks: ['hunt_wendigo_01'],
+        prerequisite: 'hunt_ghost_01',
+        isDaily: false
+    },
+    {
+        id: 'hunt_wendigo_01',
+        type: 'hunt',
+        title: 'Fome Eterna',
+        description: 'Um Wendigo caça nas florestas. Única forma de matá-lo é com fogo - Molotov + Isqueiro.',
+        icon: '🦴',
+        objectives: [
+            { type: 'kill', target: 'wendigo', current: 0, required: 1, label: 'Wendigo queimado' }
+        ],
+        rewards: { xp: 175, items: [{ id: 'adrenaline', quantity: 1 }] },
+        unlocks: [],
+        prerequisite: 'hunt_demon_01',
+        isDaily: false
+    },
+    // Quest de História
+    {
+        id: 'story_pilot',
+        type: 'story',
+        title: 'O Piloto',
+        description: 'Reviva a primeira caçada dos irmãos Winchester. Derrote 3 monstros diferentes.',
+        icon: '📺',
+        objectives: [
+            { type: 'kill', target: 'ghost', current: 0, required: 1, label: 'Fantasma' },
+            { type: 'kill', target: 'demon', current: 0, required: 1, label: 'Demônio' },
+            { type: 'kill', target: 'werewolf', current: 0, required: 1, label: 'Lobisomem' }
+        ],
+        rewards: { xp: 300, items: [{ id: 'angel_blade', quantity: 1 }] },
+        unlocks: [],
+        prerequisite: 'hunt_vampire_01',
+        isDaily: false
+    },
+    // Quests Diárias
+    {
+        id: 'daily_hunt',
+        type: 'daily',
+        title: 'Caçada Diária',
+        description: 'Mantenha a região segura derrotando pelo menos um monstro hoje.',
+        icon: '⏰',
+        objectives: [
+            { type: 'kill', target: 'any', current: 0, required: 1, label: 'Monstro derrotado' }
+        ],
+        rewards: { xp: 30, items: [] },
+        unlocks: [],
+        prerequisite: null,
+        isDaily: true
+    },
+    {
+        id: 'daily_collect',
+        type: 'daily',
+        title: 'Suprimentos',
+        description: 'Encontre recursos úteis para suas caçadas.',
+        icon: '📦',
+        objectives: [
+            { type: 'collect', target: 'any', current: 0, required: 2, label: 'Itens coletados' }
+        ],
+        rewards: { xp: 20, items: [] },
+        unlocks: [],
+        prerequisite: null,
+        isDaily: true
+    }
+];
 
 // Inicializar com mão equipada
 GameData.equipped.weapon = GameData.inventory.weapons[0];
@@ -223,6 +382,7 @@ function saveGame() {
                 encounterCount: m.encounterCount
             })),
             diary: GameData.diary,
+            quests: GameData.quests,
             savedAt: new Date().toISOString()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
@@ -292,6 +452,11 @@ function loadGame() {
             GameData.diary = saveData.diary;
         }
 
+        // Restaurar quests
+        if (saveData.quests) {
+            GameData.quests = saveData.quests;
+        }
+
         console.log(`📂 Jogo carregado! Salvo em: ${new Date(saveData.savedAt).toLocaleString('pt-BR')}`);
         return true;
     } catch (error) {
@@ -329,6 +494,391 @@ function stopAutoSave() {
 }
 
 // ============================================
+// SISTEMA DE QUESTS
+// ============================================
+
+/**
+ * Verificar se uma quest está disponível para o jogador
+ */
+function isQuestAvailable(questId) {
+    const template = QUEST_TEMPLATES.find(q => q.id === questId);
+    if (!template) return false;
+
+    // Já completada (e não é diária)
+    if (!template.isDaily && GameData.quests.completed.includes(questId)) {
+        return false;
+    }
+
+    // Já está ativa
+    if (GameData.quests.active.find(q => q.id === questId)) {
+        return false;
+    }
+
+    // Verificar pré-requisito
+    if (template.prerequisite && !GameData.quests.completed.includes(template.prerequisite)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Obter todas as quests disponíveis para aceitar
+ */
+function getAvailableQuests() {
+    checkDailyReset();
+    return QUEST_TEMPLATES.filter(q => isQuestAvailable(q.id));
+}
+
+/**
+ * Iniciar uma quest
+ */
+function startQuest(questId) {
+    if (!isQuestAvailable(questId)) {
+        console.log(`❌ Quest ${questId} não disponível`);
+        return false;
+    }
+
+    const template = QUEST_TEMPLATES.find(q => q.id === questId);
+    if (!template) return false;
+
+    // Criar cópia da quest com progresso zerado
+    const quest = {
+        ...template,
+        objectives: template.objectives.map(obj => ({ ...obj, current: 0 })),
+        startedAt: new Date().toISOString()
+    };
+
+    GameData.quests.active.push(quest);
+    saveGame();
+
+    // Adicionar ao diário
+    addDiaryEntry(`Aceitou missão: ${quest.title}`);
+
+    console.log(`📜 Quest iniciada: ${quest.title}`);
+    return true;
+}
+
+/**
+ * Atualizar progresso de quests ativas
+ */
+function updateQuestProgress(actionType, target) {
+    let questsUpdated = false;
+
+    GameData.quests.active.forEach(quest => {
+        quest.objectives.forEach(obj => {
+            // Verificar se o objetivo corresponde à ação
+            if (obj.type !== actionType) return;
+            if (obj.current >= obj.required) return;
+
+            // Verificar alvo
+            let matches = false;
+            if (obj.target === 'any') {
+                matches = true;
+            } else if (obj.target === 'any_weapon' && actionType === 'collect') {
+                // Verificar se é uma arma
+                const isWeapon = GameData.inventory.weapons.find(w => w.id === target);
+                matches = !!isWeapon;
+            } else if (obj.target === target) {
+                matches = true;
+            }
+
+            if (matches) {
+                obj.current++;
+                questsUpdated = true;
+                console.log(`📊 Quest "${quest.title}": ${obj.label} ${obj.current}/${obj.required}`);
+
+                // Mostrar feedback no HUD
+                showQuestProgressFeedback(quest, obj);
+
+                // Verificar se quest foi completada
+                checkQuestCompletion(quest.id);
+            }
+        });
+    });
+
+    if (questsUpdated) {
+        saveGame();
+        updateQuestTracker();
+    }
+}
+
+/**
+ * Verificar se uma quest foi completada
+ */
+function checkQuestCompletion(questId) {
+    const quest = GameData.quests.active.find(q => q.id === questId);
+    if (!quest) return;
+
+    // Verificar se todos os objetivos foram cumpridos
+    const allComplete = quest.objectives.every(obj => obj.current >= obj.required);
+
+    if (allComplete) {
+        completeQuest(questId);
+    }
+}
+
+/**
+ * Completar uma quest e dar recompensas
+ */
+function completeQuest(questId) {
+    const questIndex = GameData.quests.active.findIndex(q => q.id === questId);
+    if (questIndex === -1) return;
+
+    const quest = GameData.quests.active[questIndex];
+
+    // Remover das ativas
+    GameData.quests.active.splice(questIndex, 1);
+
+    // Adicionar às completadas (se não for diária que já foi completada hoje)
+    if (!GameData.quests.completed.includes(questId)) {
+        GameData.quests.completed.push(questId);
+    }
+
+    // Dar recompensas
+    GameData.player.xp += quest.rewards.xp;
+    quest.rewards.items.forEach(reward => {
+        // Encontrar item no inventário e adicionar quantidade
+        let item = GameData.inventory.weapons.find(w => w.id === reward.id);
+        if (!item) item = GameData.inventory.healing.find(h => h.id === reward.id);
+        if (!item) item = GameData.inventory.accessories.find(a => a.id === reward.id);
+
+        if (item) {
+            item.quantity += reward.quantity;
+            console.log(`🎁 Recompensa: +${reward.quantity} ${item.name}`);
+        }
+    });
+
+    // Adicionar ao diário
+    addDiaryEntry(`Completou missão: ${quest.title} (+${quest.rewards.xp} XP)`);
+
+    // Mostrar feedback de conclusão
+    showQuestCompleteFeedback(quest);
+
+    // Desbloquear próximas quests automaticamente (se tutorial)
+    if (quest.unlocks.length > 0 && quest.type !== 'story') {
+        quest.unlocks.forEach(nextId => {
+            if (isQuestAvailable(nextId)) {
+                const nextTemplate = QUEST_TEMPLATES.find(q => q.id === nextId);
+                if (nextTemplate && !nextTemplate.isDaily) {
+                    // Auto-aceitar quests de tutorial
+                    if (nextId.startsWith('tutorial_')) {
+                        startQuest(nextId);
+                    }
+                }
+            }
+        });
+    }
+
+    saveGame();
+    console.log(`✅ Quest completada: ${quest.title}!`);
+}
+
+/**
+ * Verificar e resetar quests diárias
+ */
+function checkDailyReset() {
+    const now = new Date();
+    const today = now.toDateString();
+
+    if (GameData.quests.dailyReset !== today) {
+        // Resetar quests diárias
+        GameData.quests.completed = GameData.quests.completed.filter(id => {
+            const template = QUEST_TEMPLATES.find(q => q.id === id);
+            return template && !template.isDaily;
+        });
+
+        // Remover quests diárias ativas (expiradas)
+        GameData.quests.active = GameData.quests.active.filter(q => !q.isDaily);
+
+        GameData.quests.dailyReset = today;
+        console.log('🔄 Quests diárias resetadas');
+        saveGame();
+    }
+}
+
+/**
+ * Inicializar quests para novo jogador
+ */
+function initializeQuests() {
+    checkDailyReset();
+
+    // Se não tiver nenhuma quest completada, iniciar tutorial
+    if (GameData.quests.completed.length === 0 && GameData.quests.active.length === 0) {
+        startQuest('tutorial_01');
+        // Iniciar quests diárias também
+        startQuest('daily_hunt');
+        startQuest('daily_collect');
+    }
+}
+
+/**
+ * Mostrar feedback de progresso no HUD
+ */
+function showQuestProgressFeedback(quest, objective) {
+    const tracker = document.getElementById('ar-quest-tracker');
+    if (!tracker) return;
+
+    tracker.innerHTML = `
+        <div class="quest-progress-popup">
+            <span class="quest-icon">${quest.icon}</span>
+            <span class="quest-obj">${objective.label}: ${objective.current}/${objective.required}</span>
+        </div>
+    `;
+    tracker.classList.add('show');
+
+    setTimeout(() => {
+        tracker.classList.remove('show');
+    }, 2000);
+}
+
+/**
+ * Mostrar feedback de quest completa
+ */
+function showQuestCompleteFeedback(quest) {
+    const feedback = document.getElementById('ar-hit-feedback');
+    if (feedback) {
+        feedback.textContent = `🎉 MISSÃO COMPLETA: ${quest.title}!`;
+        feedback.className = 'ar-hit-feedback quest-complete';
+
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 200]);
+        }
+
+        setTimeout(() => {
+            feedback.className = 'ar-hit-feedback';
+        }, 3000);
+    }
+}
+
+/**
+ * Atualizar quest tracker no AR HUD
+ */
+function updateQuestTracker() {
+    const tracker = document.getElementById('ar-quest-tracker');
+    if (!tracker) return;
+
+    const activeQuest = GameData.quests.active[0]; // Mostrar primeira quest ativa
+
+    if (!activeQuest) {
+        tracker.innerHTML = '';
+        return;
+    }
+
+    const incompleteObj = activeQuest.objectives.find(o => o.current < o.required);
+    if (!incompleteObj) return;
+
+    tracker.innerHTML = `
+        <div class="quest-tracker-content">
+            <span class="tracker-icon">${activeQuest.icon}</span>
+            <div class="tracker-info">
+                <span class="tracker-title">${activeQuest.title}</span>
+                <span class="tracker-obj">${incompleteObj.label}: ${incompleteObj.current}/${incompleteObj.required}</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Renderizar lista de quests na tela de quests
+ */
+function renderQuestList(filter = 'active') {
+    const list = document.getElementById('quest-list');
+    if (!list) return;
+
+    checkDailyReset();
+    list.innerHTML = '';
+
+    let quests = [];
+
+    switch (filter) {
+        case 'active':
+            quests = GameData.quests.active;
+            break;
+        case 'available':
+            quests = getAvailableQuests();
+            break;
+        case 'completed':
+            quests = QUEST_TEMPLATES.filter(q => GameData.quests.completed.includes(q.id));
+            break;
+    }
+
+    if (quests.length === 0) {
+        const messages = {
+            active: 'Nenhuma missão ativa. Aceite uma missão disponível!',
+            available: 'Nenhuma missão disponível no momento.',
+            completed: 'Você ainda não completou nenhuma missão.'
+        };
+        list.innerHTML = `<div class="quest-empty">${messages[filter]}</div>`;
+        return;
+    }
+
+    quests.forEach(quest => {
+        const card = document.createElement('div');
+        card.className = `quest-card ${quest.type}`;
+
+        // Calcular progresso
+        const totalRequired = quest.objectives.reduce((sum, o) => sum + o.required, 0);
+        const totalCurrent = quest.objectives.reduce((sum, o) => sum + Math.min(o.current || 0, o.required), 0);
+        const progressPercent = Math.round((totalCurrent / totalRequired) * 100);
+
+        const isCompleted = filter === 'completed';
+        const isAvailable = filter === 'available';
+
+        card.innerHTML = `
+            <div class="quest-header">
+                <span class="quest-icon">${quest.icon}</span>
+                <div class="quest-title-info">
+                    <span class="quest-title">${quest.title}</span>
+                    <span class="quest-type-badge ${quest.type}">${getQuestTypeName(quest.type)}</span>
+                </div>
+                ${quest.isDaily ? '<span class="quest-daily-badge">⏰ Diária</span>' : ''}
+            </div>
+            <p class="quest-description">${quest.description}</p>
+            ${!isCompleted ? `
+                <div class="quest-objectives">
+                    ${quest.objectives.map(obj => `
+                        <div class="quest-objective ${(obj.current || 0) >= obj.required ? 'complete' : ''}">
+                            <span class="obj-check">${(obj.current || 0) >= obj.required ? '✓' : '○'}</span>
+                            <span class="obj-label">${obj.label}</span>
+                            <span class="obj-progress">${obj.current || 0}/${obj.required}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="quest-progress-bar">
+                    <div class="quest-progress-fill" style="width: ${progressPercent}%"></div>
+                </div>
+            ` : ''}
+            <div class="quest-rewards">
+                <span class="reward-xp">⭐ ${quest.rewards.xp} XP</span>
+                ${quest.rewards.items.map(i => {
+            const item = GameData.inventory.weapons.find(w => w.id === i.id) ||
+                GameData.inventory.healing.find(h => h.id === i.id);
+            return item ? `<span class="reward-item">+${i.quantity} ${item.name}</span>` : '';
+        }).join('')}
+            </div>
+            ${isAvailable ? `<button class="quest-accept-btn" onclick="startQuest('${quest.id}'); renderQuestList('active');">Aceitar Missão</button>` : ''}
+            ${isCompleted ? '<div class="quest-completed-badge">✓ Completada</div>' : ''}
+        `;
+
+        list.appendChild(card);
+    });
+}
+
+/**
+ * Obter nome do tipo de quest em português
+ */
+function getQuestTypeName(type) {
+    const names = {
+        hunt: 'Caça',
+        gather: 'Coleta',
+        story: 'História',
+        daily: 'Diária'
+    };
+    return names[type] || type;
+}
+
+// ============================================
 // NAVEGAÇÃO
 // ============================================
 
@@ -358,10 +908,13 @@ function goto(screenId) {
             updateProfileStats();
         } else if (screenId === 'hunt') {
             startARMode();
+            updateQuestTracker();
         } else if (screenId === 'map') {
             initFullMap();
         } else if (screenId === 'diary') {
             renderDiary();
+        } else if (screenId === 'quests') {
+            renderQuestList('active');
         }
     }
 
@@ -567,6 +1120,9 @@ async function initSplash() {
 
         // Iniciar auto-save
         startAutoSave();
+
+        // Inicializar quests
+        initializeQuests();
 
         goto('home');
 
@@ -1628,6 +2184,9 @@ AFRAME.registerComponent('ar-monster', {
         // Adicionar ao diário com nome correto
         addDiaryEntry(`Derrotou um ${monsterName}`);
 
+        // Atualizar progresso de quests
+        updateQuestProgress('kill', this.data.type);
+
         // Salvar progresso
         saveGame();
 
@@ -2185,6 +2744,9 @@ AFRAME.registerComponent('ar-loot', {
 
             // Adicionar ao diário
             addDiaryEntry(`Coletou ${this.data.name} (${this.data.rarity || 'comum'})`);
+
+            // Atualizar progresso de quests
+            updateQuestProgress('collect', this.data.id);
 
             console.log(`✨ Coletou: ${this.data.name} [${this.data.rarity}]`);
 
@@ -3234,6 +3796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-inventory')?.addEventListener('click', () => goto('inventory'));
     document.getElementById('btn-bestiary')?.addEventListener('click', () => goto('bestiary'));
     document.getElementById('btn-diary')?.addEventListener('click', () => goto('diary'));
+    document.getElementById('btn-quests')?.addEventListener('click', () => goto('quests'));
     document.getElementById('btn-profile')?.addEventListener('click', () => goto('profile'));
 
     // Back buttons
@@ -3241,6 +3804,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-back-inventory')?.addEventListener('click', goBack);
     document.getElementById('btn-back-bestiary')?.addEventListener('click', goBack);
     document.getElementById('btn-back-diary')?.addEventListener('click', goBack);
+    document.getElementById('btn-back-quests')?.addEventListener('click', goBack);
     document.getElementById('btn-back-profile')?.addEventListener('click', goBack);
 
     // Inventory tabs
@@ -3250,6 +3814,15 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             GameData.currentTab = tab.dataset.tab;
             renderInventoryFull();
+        });
+    });
+
+    // Quest tabs
+    document.querySelectorAll('.quest-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.quest-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderQuestList(tab.dataset.tab);
         });
     });
 
@@ -3339,3 +3912,7 @@ window.showRouteOnMap = showRouteOnMap;
 // Funções do modal AR
 window.startDemoMode = startDemoMode;
 window.closeARErrorModal = closeARErrorModal;
+
+// Funções de quests
+window.startQuest = startQuest;
+window.renderQuestList = renderQuestList;

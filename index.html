@@ -78,6 +78,10 @@
         <button class="menu-card" id="btn-bestiary">
           <img src="/images/icon-casos.png" alt="Casos" class="img-btn">
         </button>
+        <button class="menu-card" id="btn-quests">
+          <span class="menu-icon">📜</span>
+          <span class="menu-label">Missões</span>
+        </button>
         <button class="menu-card" id="btn-diary">
           <img src="/images/icon-diario.png" alt="Diário" class="img-btn">
         </button>
@@ -229,6 +233,24 @@
   </div>
 
   <!-- ========================================
+       TELA: MISSÕES (QUESTS)
+       ======================================== -->
+  <div id="screen-quests" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-quests">←</button>
+      <h2>📜 Missões</h2>
+    </div>
+    <div class="quest-tabs">
+      <button class="quest-tab active" data-tab="active">Ativas</button>
+      <button class="quest-tab" data-tab="available">Disponíveis</button>
+      <button class="quest-tab" data-tab="completed">Completas</button>
+    </div>
+    <div class="quest-list" id="quest-list">
+      <!-- Quests serão renderizadas aqui pelo JS -->
+    </div>
+  </div>
+
+  <!-- ========================================
        TELA: PERFIL
        ======================================== -->
   <div id="screen-profile" class="screen hidden">
@@ -359,6 +381,11 @@
 
       <div class="ar-crosshair"></div>
       <div class="ar-hit-feedback" id="ar-hit-feedback"></div>
+
+      <!-- Quest Tracker -->
+      <div class="ar-quest-tracker" id="ar-quest-tracker">
+        <!-- Objetivo da quest atual será renderizado via JS -->
+      </div>
 
       <!-- Radar de Direção (Bússola) -->
       <div class="ar-radar" id="ar-radar">
