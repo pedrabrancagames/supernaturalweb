@@ -892,7 +892,7 @@ function renderDiary() {
         return;
     }
 
-    // Ordenar por data mais recente
+    // As entradas já estão na ordem mais recente primeiro (via unshift em addDiaryEntry)
     const entries = [...GameData.diary].slice(0, 50); // Limitar a 50 entradas
 
     container.innerHTML = entries.map((entry, index) => {
@@ -1048,9 +1048,6 @@ async function startARMode() {
         // Verificar suporte a AR imersivo
         const supported = await navigator.xr.isSessionSupported('immersive-ar');
         if (!supported) {
-            // Tentar inlineAR como fallback
-            const inlineSupported = await navigator.xr.isSessionSupported('inline').catch(() => false);
-
             showARErrorModal(
                 'AR Não Disponível',
                 'Seu dispositivo não suporta AR imersivo. Instale o Google Play Services for AR (ARCore) ou use um dispositivo compatível.',
@@ -1542,7 +1539,7 @@ AFRAME.registerComponent('ar-monster', {
             updateMonsterHP(this.data.hp, this.data.maxHp, this.data.type);
 
             // Feedback de dano de fogo
-            showHitFeedback(true, burnDamage, false, false, '', true);
+            showHitFeedback(true, burnDamage, false, false, '');
 
             if (this.data.hp <= 0 || burnTicks >= 5) {
                 clearInterval(this.burnTimer);
@@ -1729,6 +1726,12 @@ AFRAME.registerSystem('combat', {
                         monster: monsterComponent.data.type,
                         damage: result.damage,
                         isWeakness: result.isWeakness,
+                        isImmune: result.isImmune,
+                        immuneReason: result.immuneReason,
+                        comboTriggered: result.comboTriggered,
+                        comboMessage: result.comboMessage,
+                        stateChanged: result.stateChanged,
+                        newState: result.newState,
                         remainingHp: result.remainingHp
                     };
                 }
@@ -3278,7 +3281,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // AR buttons
     document.getElementById('ar-exit')?.addEventListener('click', exitAR);
 
+    // Debounce para o botão de fire (evita spam de ataques)
+    let fireDebounce = false;
+    const FIRE_COOLDOWN = 300; // 300ms entre ataques
+
     document.getElementById('ar-fire')?.addEventListener('click', () => {
+        // Verificar debounce
+        if (fireDebounce) return;
+        fireDebounce = true;
+        setTimeout(() => { fireDebounce = false; }, FIRE_COOLDOWN);
+
         const scene = document.getElementById('ar-scene');
         const combat = scene?.systems['combat'];
         const weapon = GameData.equipped.weapon;
