@@ -71,7 +71,7 @@ input {
   background-size: cover;
   /* Imagem redimensionada para cobrir a tela */
   justify-content: center;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .splash-content {
