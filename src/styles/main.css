@@ -1395,63 +1395,57 @@ input {
 .ar-player-hp.supernatural-hp {
   position: absolute;
   top: 20px;
-  left: 20px;
+  left: 15px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(145deg, rgba(15, 10, 10, 0.95), rgba(30, 15, 15, 0.9));
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 2px solid #8b0000;
-  box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+  gap: 8px;
+  background: transparent;
+  padding: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .hp-icon {
   width: 32px;
   height: 32px;
   object-fit: contain;
-  filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.6));
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
 }
 
 .supernatural-hp .hp-bar {
-  width: 100px;
-  height: 12px;
-  background: linear-gradient(180deg, #1a0a0a, #0d0505);
-  border-radius: 6px;
-  border: 1px solid #4a0000;
+  width: 80px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .supernatural-hp .hp-fill {
   height: 100%;
   background: linear-gradient(90deg, #8b0000, #cc0000, #ff2020, #cc0000, #8b0000);
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px rgba(255, 50, 50, 0.5);
+  box-shadow: 0 0 5px rgba(255, 50, 50, 0.5);
 }
 
 .hp-text {
-  font-family: 'Cinzel', serif;
-  font-size: 11px;
-  color: #cc9999;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  color: #fff;
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
-  min-width: 50px;
 }
 
 /* Efeito de pulso com HP baixo */
-.supernatural-hp.low-hp {
-  animation: hpPulse 1s ease-in-out infinite;
+.supernatural-hp.low-hp .hp-fill {
+  animation: hpGlow 0.5s ease-in-out infinite alternate;
 }
 
-@keyframes hpPulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+@keyframes hpGlow {
+  from {
+    box-shadow: 0 0 5px rgba(255, 50, 50, 0.5);
   }
 
-  50% {
-    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8);
+  to {
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.9);
   }
 }
 
@@ -1459,15 +1453,14 @@ input {
 .ar-monster-hp.supernatural-monster-hp {
   position: absolute;
   top: 20px;
-  right: 20px;
+  right: 15px;
   display: none;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(145deg, rgba(10, 10, 15, 0.95), rgba(20, 15, 25, 0.9));
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 2px solid #4a0066;
-  box-shadow: 0 0 15px rgba(100, 0, 150, 0.5);
+  gap: 8px;
+  background: transparent;
+  padding: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .ar-monster-hp.supernatural-monster-hp.visible {
@@ -1478,43 +1471,41 @@ input {
 @keyframes monsterAppear {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(10px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
 .monster-hp-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-  filter: drop-shadow(0 0 5px rgba(150, 100, 200, 0.6));
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
 }
 
 .monster-hp-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .monster-name {
-  font-family: 'Cinzel', serif;
-  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
   font-weight: 600;
-  color: #e0ccff;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
 .supernatural-monster-hp .hp-bar {
-  width: 100px;
-  height: 10px;
-  background: linear-gradient(180deg, #0a0510, #050208);
-  border-radius: 5px;
-  border: 1px solid #3a0050;
+  width: 80px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -1522,49 +1513,24 @@ input {
   height: 100%;
   background: linear-gradient(90deg, #660066, #990099, #cc00cc, #990099, #660066);
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px rgba(200, 0, 200, 0.5);
+  box-shadow: 0 0 5px rgba(200, 0, 200, 0.5);
 }
 
 /* Cores por tipo de monstro */
-.supernatural-monster-hp.demon {
-  border-color: #aa0000;
-  box-shadow: 0 0 15px rgba(200, 0, 0, 0.5);
-}
-
 .supernatural-monster-hp.demon .hp-fill.enemy {
   background: linear-gradient(90deg, #8b0000, #cc0000, #ff2020, #cc0000, #8b0000);
-}
-
-.supernatural-monster-hp.vampire {
-  border-color: #660033;
-  box-shadow: 0 0 15px rgba(150, 0, 80, 0.5);
 }
 
 .supernatural-monster-hp.vampire .hp-fill.enemy {
   background: linear-gradient(90deg, #4a0020, #800040, #aa0050, #800040, #4a0020);
 }
 
-.supernatural-monster-hp.werewolf {
-  border-color: #aa6600;
-  box-shadow: 0 0 15px rgba(200, 150, 0, 0.5);
-}
-
 .supernatural-monster-hp.werewolf .hp-fill.enemy {
   background: linear-gradient(90deg, #8b6600, #cc9900, #ffcc00, #cc9900, #8b6600);
 }
 
-.supernatural-monster-hp.ghost {
-  border-color: #004466;
-  box-shadow: 0 0 15px rgba(100, 200, 255, 0.5);
-}
-
 .supernatural-monster-hp.ghost .hp-fill.enemy {
   background: linear-gradient(90deg, #003355, #0066aa, #3399cc, #0066aa, #003355);
-}
-
-.supernatural-monster-hp.wendigo {
-  border-color: #336600;
-  box-shadow: 0 0 15px rgba(100, 150, 0, 0.5);
 }
 
 .supernatural-monster-hp.wendigo .hp-fill.enemy {
