@@ -1452,7 +1452,7 @@ input {
 /* === HP DO MONSTRO === */
 .ar-monster-hp.supernatural-monster-hp {
   position: absolute;
-  top: 20px;
+  top: 30px;
   right: 10px;
   display: none;
   align-items: center;
