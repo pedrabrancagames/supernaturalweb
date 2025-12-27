@@ -1157,11 +1157,12 @@ AFRAME.registerComponent('ar-monster', {
         };
 
         // Mapa de escalas para cada monstro
+        // Escalas originais dos modelos GLB para modo AR
         const scaleMap = {
-            werewolf: '2 2 2',
-            vampire: '2 2 2',
-            ghost: '2 2 2',
-            demon: '2 2 2'
+            werewolf: '1 1 1',
+            vampire: '1 1 1',
+            ghost: '1 1 1',
+            demon: '1 1 1'
         };
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
@@ -1494,8 +1495,8 @@ AFRAME.registerComponent('ar-monster', {
                 // Efeito de escala pulsando (como se estivesse queimando)
                 this.el.setAttribute('animation__burning', {
                     property: 'scale',
-                    from: '2 2 2',
-                    to: '2.2 2.2 2.2',
+                    from: '1 1 1',
+                    to: '1.1 1.1 1.1',
                     dur: 150,
                     loop: true,
                     dir: 'alternate',
@@ -1904,19 +1905,20 @@ AFRAME.registerSystem('monster-spawner', {
 
         // Tipos de loot possíveis - apenas itens com modelos 3D
         const allLootTypes = [
-            { id: 'holy_water', icon: '', name: 'Água Benta', category: 'weapons', damage: 10, model: 'holy-water-model', scale: '0.6 0.6 0.6' },
-            { id: 'salt', icon: '', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1.2 1.2 1.2' },
-            { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 15, model: 'knife-model', scale: '0.3 0.3 0.3' },
-            { id: 'shotgun', icon: '', name: 'Espingarda', category: 'weapons', damage: 20, model: 'shotgun-model', scale: '0.5 0.5 0.5' },
-            { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '1.5 1.5 1.5' },
-            { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 50, model: 'colt-model', scale: '0.3 0.3 0.3' },
-            { id: 'devil_trap', icon: '', name: 'Selo da Armadilha', category: 'weapons', damage: 0, model: 'selo-model', scale: '0.5 0.5 0.5' },
-            { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '0.1 0.1 0.1' },
-            { id: 'angel_blade', icon: '', name: 'Lâmina de Anjo', category: 'weapons', damage: 80, model: 'knife-angel-model', scale: '0.4 0.4 0.4' },
-            { id: 'blood_knife', icon: '', name: 'Faca com Sangue', category: 'weapons', damage: 40, model: 'knife-blood-model', scale: '0.5 0.5 0.5' },
-            { id: 'wooden_stake', icon: '', name: 'Estaca de Madeira', category: 'weapons', damage: 100, model: 'estaca-model', scale: '0.6 0.6 0.6' },
-            { id: 'molotov', icon: '', name: 'Coquetel Molotov', category: 'weapons', damage: 60, model: 'molotov-model', scale: '0.4 0.4 0.4' },
-            { id: 'lighter', icon: '', name: 'Isqueiro', category: 'weapons', damage: 0, model: 'isqueiro-model', scale: '0.5 0.5 0.5' }
+            // Escalas originais dos modelos GLB para itens de loot
+            { id: 'holy_water', icon: '', name: 'Água Benta', category: 'weapons', damage: 10, model: 'holy-water-model', scale: '1 1 1' },
+            { id: 'salt', icon: '', name: 'Sal', category: 'weapons', damage: 25, model: 'salt-model', scale: '1 1 1' },
+            { id: 'knife', icon: '', name: 'Faca', category: 'weapons', damage: 15, model: 'knife-model', scale: '1 1 1' },
+            { id: 'shotgun', icon: '', name: 'Espingarda', category: 'weapons', damage: 20, model: 'shotgun-model', scale: '1 1 1' },
+            { id: 'crowbar', icon: '', name: 'Barra de Ferro', category: 'weapons', damage: 30, model: 'crowbar-model', scale: '1 1 1' },
+            { id: 'colt', icon: '', name: 'Colt', category: 'weapons', damage: 50, model: 'colt-model', scale: '1 1 1' },
+            { id: 'devil_trap', icon: '', name: 'Selo da Armadilha', category: 'weapons', damage: 0, model: 'selo-model', scale: '1 1 1' },
+            { id: 'bible', icon: '', name: 'Bíblia', category: 'weapons', damage: 100, model: 'bible-model', scale: '1 1 1' },
+            { id: 'angel_blade', icon: '', name: 'Lâmina de Anjo', category: 'weapons', damage: 80, model: 'knife-angel-model', scale: '1 1 1' },
+            { id: 'blood_knife', icon: '', name: 'Faca com Sangue', category: 'weapons', damage: 40, model: 'knife-blood-model', scale: '1 1 1' },
+            { id: 'wooden_stake', icon: '', name: 'Estaca de Madeira', category: 'weapons', damage: 100, model: 'estaca-model', scale: '1 1 1' },
+            { id: 'molotov', icon: '', name: 'Coquetel Molotov', category: 'weapons', damage: 60, model: 'molotov-model', scale: '1 1 1' },
+            { id: 'lighter', icon: '', name: 'Isqueiro', category: 'weapons', damage: 0, model: 'isqueiro-model', scale: '1 1 1' }
         ];
 
         // Filtrar itens que o jogador já coletou (quantity > 0)
