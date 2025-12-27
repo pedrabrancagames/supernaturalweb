@@ -149,7 +149,8 @@ input {
    HOME SCREEN
    ======================================== */
 #screen-home {
-  background: linear-gradient(180deg, #0f0f0f 0%, #0a0a0a 100%);
+  background: #0a0a0a url('/images/bg-base.jpg') no-repeat center center;
+  background-size: cover;
   padding: 20px;
 }
 
@@ -254,6 +255,13 @@ input {
   margin-bottom: 8px;
 }
 
+.menu-icon-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
 .menu-label {
   font-size: 16px;
   font-weight: 600;
@@ -278,6 +286,12 @@ input {
 
 .menu-grid .menu-icon {
   font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.menu-grid .menu-icon-img {
+  width: 48px;
+  height: 48px;
   margin-bottom: 6px;
 }
 
