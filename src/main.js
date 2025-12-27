@@ -1539,17 +1539,17 @@ AFRAME.registerComponent('ar-monster', {
         const originalColor = this.el.getAttribute('material')?.color || '#ffffff';
         this.el.setAttribute('material', 'emissive', isWeakness ? '#ffff00' : '#ff0000');
 
-        // Guardar posição original para restaurar após efeito
-        const pos = this.el.getAttribute('position');
-        const originalPos = { x: pos.x, y: pos.y, z: pos.z };
+        // Guardar escala original para restaurar após efeito
+        const scale = this.el.getAttribute('scale');
+        const originalScale = { x: scale.x, y: scale.y, z: scale.z };
 
-        // Pequeno efeito de escala (shake) em vez de mover posição
-        // Isso evita o bug de o monstro subir continuamente
+        // Pequeno efeito de escala sutil (5% maior) - uniforme para não distorcer
+        // Isso evita o bug de deformação e mantém o monstro como alvo válido
         this.el.setAttribute('animation__hit', {
             property: 'scale',
-            from: this.el.getAttribute('scale'),
-            to: { x: pos.x * 1.1, y: pos.y * 1.1, z: pos.z * 1.1 },
-            dur: 100,
+            from: originalScale,
+            to: { x: scale.x * 1.05, y: scale.y * 1.05, z: scale.z * 1.05 },
+            dur: 80,
             dir: 'alternate',
             easing: 'easeOutQuad'
         });
@@ -1557,10 +1557,11 @@ AFRAME.registerComponent('ar-monster', {
         setTimeout(() => {
             this.el.setAttribute('material', 'emissive', '#000000');
             this.el.removeAttribute('animation__hit');
-            // Garantir que a posição está correta
-            this.el.setAttribute('position', originalPos);
-        }, 200);
+            // Garantir que a escala está correta após o efeito
+            this.el.setAttribute('scale', originalScale);
+        }, 160);
     },
+
 
     getImmunityMessage: function (monsterType, weapon) {
         const messages = {
