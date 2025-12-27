@@ -1821,11 +1821,15 @@ AFRAME.registerComponent('ar-monster', {
 
         // TODOS os monstros olham para o jogador
         if (this.monsterState !== 'dead') {
-            const currentPos = this.el.getAttribute('position');
-            const angleToPlayer = Math.atan2(cameraPos.x - currentPos.x, cameraPos.z - currentPos.z) * (180 / Math.PI);
-            // Aplicar offset de rotação para corrigir modelos que vêm de lado/costas
-            const finalRotation = angleToPlayer + (this.rotationOffset || 0);
-            this.el.setAttribute('rotation', { x: 0, y: finalRotation, z: 0 });
+            // Usar lookAt do Three.js para rotação mais robusta
+            // Criar vetor alvo na mesma altura do monstro para evitar inclinação (apenas rotação Y)
+            const targetPos = new THREE.Vector3(cameraPos.x, this.el.object3D.position.y, cameraPos.z);
+            this.el.object3D.lookAt(targetPos);
+
+            // Aplicar offset de rotação (se necessário)
+            if (this.rotationOffset) {
+                this.el.object3D.rotateY(THREE.MathUtils.degToRad(this.rotationOffset));
+            }
         }
 
         // Animação de tremida para monstros presos
