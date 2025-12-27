@@ -70,8 +70,8 @@ input {
   background: #000000 url('/images/bg-load.jpg') no-repeat center center;
   background-size: cover;
   /* Imagem redimensionada para cobrir a tela */
-  justify-content: center;
-  align-items: flex-end;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .splash-content {
