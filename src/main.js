@@ -1728,18 +1728,41 @@ AFRAME.registerComponent('ar-monster', {
             wendigo: '#wendigo-model'
         };
 
-        // Mapa de escalas para cada monstro (+150% para ficarem bem visíveis)
-        // Escalas maiores para melhor visualização no modo AR
+        // Mapa de escalas para cada monstro
         const scaleMap = {
             werewolf: '2.5 2.5 2.5',
             vampire: '2.5 2.5 2.5',
             ghost: '2.5 2.5 2.5',
-            demon: '2.5 2.5 2.5',
+            demon: '3 3 3',  // Demon um pouco maior para visibilidade
             wendigo: '2.5 2.5 2.5'
+        };
+
+        // Offset de rotação Y para corrigir modelos que não estão de frente
+        // Alguns modelos GLB são exportados olhando para outra direção
+        this.rotationOffset = {
+            werewolf: 0,
+            vampire: 180,   // Vampiro estava de costas
+            ghost: 0,
+            demon: 0,
+            wendigo: 0
+        }[this.data.type] || 0;
+
+        // Offset Y para monstros que precisam ficar mais alto/baixo
+        const yOffsetMap = {
+            werewolf: 0,
+            vampire: 0,
+            ghost: 0.5,
+            demon: 0.5,  // Demon um pouco acima do chão
+            wendigo: 0
         };
 
         this.el.setAttribute('gltf-model', modelMap[this.data.type] || '#werewolf-model');
         this.el.setAttribute('scale', scaleMap[this.data.type] || '1 1 1');
+
+        // Aplicar offset de Y na posição
+        const pos = this.el.getAttribute('position');
+        const yOffset = yOffsetMap[this.data.type] || 0;
+        this.el.setAttribute('position', { x: pos.x, y: pos.y + yOffset, z: pos.z });
 
         // Inicializar estado
         this.monsterState = 'normal';
@@ -1760,9 +1783,7 @@ AFRAME.registerComponent('ar-monster', {
             this.ghostHoverOffset = 0;
             this.ghostOrbitRadius = 2 + Math.random();
 
-            const pos = this.el.getAttribute('position');
-            this.ghostBaseY = pos.y + 0.5;
-            this.el.setAttribute('position', { x: pos.x, y: this.ghostBaseY, z: pos.z });
+            this.ghostBaseY = pos.y + yOffset;
 
             console.log(`👻 Fantasma spawnado - Visível: ${hasCamera}`);
         }
@@ -1771,6 +1792,9 @@ AFRAME.registerComponent('ar-monster', {
         if (combatSystem) {
             combatSystem.registerMonster(this.el);
         }
+
+        // Log para debug
+        console.log(`🐺 Monstro ${this.data.type} inicializado - Pos: ${JSON.stringify(pos)}, Offset Y: ${yOffset}`);
     },
 
     tick: function (time, deltaTime) {
@@ -1799,7 +1823,9 @@ AFRAME.registerComponent('ar-monster', {
         if (this.monsterState !== 'dead') {
             const currentPos = this.el.getAttribute('position');
             const angleToPlayer = Math.atan2(cameraPos.x - currentPos.x, cameraPos.z - currentPos.z) * (180 / Math.PI);
-            this.el.setAttribute('rotation', { x: 0, y: angleToPlayer, z: 0 });
+            // Aplicar offset de rotação para corrigir modelos que vêm de lado/costas
+            const finalRotation = angleToPlayer + (this.rotationOffset || 0);
+            this.el.setAttribute('rotation', { x: 0, y: finalRotation, z: 0 });
         }
 
         // Animação de tremida para monstros presos
