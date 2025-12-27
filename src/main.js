@@ -1098,8 +1098,26 @@ function exitAR() {
 function updateARHUD() {
     // Atualizar HP do jogador
     const hpFill = document.getElementById('ar-player-hp-fill');
+    const hpText = document.getElementById('ar-player-hp-text');
+    const hpContainer = document.querySelector('.ar-player-hp.supernatural-hp');
+
     if (hpFill) {
-        hpFill.style.width = `${(GameData.player.hp / GameData.player.maxHp) * 100}%`;
+        const hpPercent = (GameData.player.hp / GameData.player.maxHp) * 100;
+        hpFill.style.width = `${hpPercent}%`;
+
+        // Efeito de pulso quando HP baixo
+        if (hpContainer) {
+            if (hpPercent <= 30) {
+                hpContainer.classList.add('low-hp');
+            } else {
+                hpContainer.classList.remove('low-hp');
+            }
+        }
+    }
+
+    // Atualizar texto de HP
+    if (hpText) {
+        hpText.textContent = `${GameData.player.hp}/${GameData.player.maxHp}`;
     }
 
     // Os slots agora usam imagens PNG fixas (inventario-armas.png, etc.)
@@ -2196,17 +2214,41 @@ function showMonsterHP(name, hp, maxHp) {
     const container = document.getElementById('ar-monster-hp');
     const nameEl = document.getElementById('ar-monster-name');
     const fillEl = document.getElementById('ar-monster-hp-fill');
+    const iconEl = document.getElementById('ar-monster-icon');
 
     const names = {
-        werewolf: '🐺 Lobisomem',
-        vampire: '🧛 Vampiro',
-        ghost: '👻 Fantasma',
-        demon: '😈 Demônio',
-        wendigo: '🦴 Wendigo',
-        hellhound: '🐕‍🦺 Cão do Inferno',
-        witch: '🧙‍♀️ Bruxa',
-        crossroads_demon: '🔴 Demônio da Encruzilhada'
+        werewolf: 'Lobisomem',
+        vampire: 'Vampiro',
+        ghost: 'Fantasma',
+        demon: 'Demônio',
+        wendigo: 'Wendigo',
+        hellhound: 'Cão do Inferno',
+        witch: 'Bruxa',
+        crossroads_demon: 'Demônio da Encruzilhada'
     };
+
+    // Mapa de ícones por tipo de monstro
+    const icons = {
+        werewolf: '/images/icon-werewolf.png',
+        vampire: '/images/icon-vampire.png',
+        ghost: '/images/icon-ghost.png',
+        demon: '/images/icon-demon.png',
+        wendigo: '/images/icone-wendigo.png',
+        hellhound: '/images/icon-demon.png',
+        witch: '/images/icon-ghost.png',
+        crossroads_demon: '/images/icon-demon.png'
+    };
+
+    // Remover classes de tipo anteriores
+    container.classList.remove('werewolf', 'vampire', 'ghost', 'demon', 'wendigo', 'hellhound', 'witch', 'crossroads_demon');
+
+    // Adicionar classe do tipo atual para cores temáticas
+    container.classList.add(name);
+
+    // Atualizar ícone do monstro
+    if (iconEl) {
+        iconEl.src = icons[name] || '/images/icon-demon.png';
+    }
 
     nameEl.textContent = names[name] || name;
     fillEl.style.width = `${(hp / maxHp) * 100}%`;

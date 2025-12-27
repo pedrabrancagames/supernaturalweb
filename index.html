@@ -337,17 +337,23 @@
         <img src="/images/icon-modoar.png" alt="Sair" style="width: 100%; height: 100%; object-fit: contain;">
       </button>
 
-      <div class="ar-player-hp">
-        <span>❤️</span>
+      <!-- HP do Jogador -->
+      <div class="ar-player-hp supernatural-hp">
+        <img src="/images/icon-jogador.png" alt="HP" class="hp-icon">
         <div class="hp-bar">
           <div class="hp-fill" id="ar-player-hp-fill"></div>
         </div>
+        <span class="hp-text" id="ar-player-hp-text">100/100</span>
       </div>
 
-      <div class="ar-monster-hp" id="ar-monster-hp">
-        <span id="ar-monster-name">Monstro</span>
-        <div class="hp-bar">
-          <div class="hp-fill enemy" id="ar-monster-hp-fill"></div>
+      <!-- HP do Monstro -->
+      <div class="ar-monster-hp supernatural-monster-hp" id="ar-monster-hp">
+        <img src="/images/icon-werewolf.png" alt="" class="monster-hp-icon" id="ar-monster-icon">
+        <div class="monster-hp-info">
+          <span class="monster-name" id="ar-monster-name">Monstro</span>
+          <div class="hp-bar">
+            <div class="hp-fill enemy" id="ar-monster-hp-fill"></div>
+          </div>
         </div>
       </div>
 
