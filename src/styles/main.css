@@ -1413,7 +1413,7 @@ input {
 }
 
 .supernatural-hp .hp-bar {
-  width: 60px;
+  width: 70px;
   height: 8px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 4px;
@@ -1502,7 +1502,7 @@ input {
 }
 
 .supernatural-monster-hp .hp-bar {
-  width: 60px;
+  width: 70px;
   height: 8px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 4px;
