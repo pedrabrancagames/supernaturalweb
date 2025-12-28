@@ -1873,24 +1873,32 @@ AFRAME.registerComponent('ar-monster', {
             } else if (comboResult.comboStep === 2) {
                 // Segundo passo do combo - verificar se está no estado correto
                 if (this.monsterState === comboResult.requiredState) {
-                    // Combo completo!
-                    comboTriggered = true;
-                    comboMessage = comboResult.message;
-                    actualDamage = comboResult.comboDamage || amount * 3;
-                    isWeakness = true;
 
-                    // Limpar timer
-                    if (this.comboTimer) {
-                        clearTimeout(this.comboTimer);
-                        this.comboTimer = null;
-                    }
+                    if (comboResult.requiresChanneling) {
+                        // Canalização necessária (Exorcismo)
+                        comboTriggered = true;
+                        comboMessage = comboResult.message;
+                        actualDamage = 0; // Dano será aplicado manualmente ao completar o áudio
+                    } else {
+                        // Combo completo instantâneo
+                        comboTriggered = true;
+                        comboMessage = comboResult.message;
+                        actualDamage = comboResult.comboDamage || amount * 3;
+                        isWeakness = true;
 
-                    // Efeito especial para Wendigo (queimando)
-                    if (this.data.type === 'wendigo') {
-                        this.setState('burning');
-                        stateChanged = true;
-                        newState = 'burning';
-                        this.startBurning();
+                        // Limpar timer
+                        if (this.comboTimer) {
+                            clearTimeout(this.comboTimer);
+                            this.comboTimer = null;
+                        }
+
+                        // Efeito especial para Wendigo (queimando)
+                        if (this.data.type === 'wendigo') {
+                            this.setState('burning');
+                            stateChanged = true;
+                            newState = 'burning';
+                            this.startBurning();
+                        }
                     }
                 } else {
                     // Não está no estado certo para o combo
@@ -1946,6 +1954,7 @@ AFRAME.registerComponent('ar-monster', {
         };
 
         return {
+            requiresChanneling: comboResult.requiresChanneling,
             damage: actualDamage,
             isWeakness,
             isImmune,
@@ -1982,8 +1991,8 @@ AFRAME.registerComponent('ar-monster', {
                     requiresCombo: true,
                     comboStep: 2,
                     requiredState: 'trapped',
-                    message: '📖 EXORCISMO COMPLETO!',
-                    comboDamage: 500, // Mata instantaneamente
+                    message: '📖 Lendo exorcismo...',
+                    requiresChanneling: true, // Indica que precisa manter pressionado
                     wrongStateMessage: 'Prenda o demônio primeiro com a Armadilha!'
                 };
             }
@@ -2173,6 +2182,16 @@ AFRAME.registerComponent('ar-monster', {
         return messages[monsterType] || `Este monstro é imune a ${weapon.name}!`;
     },
 
+    exorcise: function () {
+        showComboFeedback('✞ EXORCISMO COMPLETO!', 'critical');
+
+        // Efeito de partículas/luz seria bom aqui
+        const pos = this.el.getAttribute('position');
+        // Partículas fake com DOM se for possível ou apenas feedback visual
+
+        this.die();
+    },
+
     die: function () {
         this.monsterState = 'dead';
 
@@ -2304,6 +2323,8 @@ AFRAME.registerSystem('combat', {
 
                     return {
                         hit: true,
+                        monsterElement: monsterEl,
+                        requiresChanneling: result.requiresChanneling,
                         monster: monsterComponent.data.type,
                         damage: result.damage,
                         isWeakness: result.isWeakness,
@@ -3865,36 +3886,106 @@ document.addEventListener('DOMContentLoaded', () => {
     // AR buttons
     document.getElementById('ar-exit')?.addEventListener('click', exitAR);
 
-    // Debounce para o botão de fire (evita spam de ataques)
+    // Variáveis de controle de ação e exorcismo
     let fireDebounce = false;
     const FIRE_COOLDOWN = 300; // 300ms entre ataques
 
-    document.getElementById('ar-fire')?.addEventListener('click', () => {
-        // Verificar debounce
-        if (fireDebounce) return;
-        fireDebounce = true;
-        setTimeout(() => { fireDebounce = false; }, FIRE_COOLDOWN);
+    // Variáveis para Exorcismo
+    let exorcismAudio = document.getElementById('audio-exorcism');
+    let isExorcising = false;
+    let currentDemonTarget = null;
 
+    const fireBtn = document.getElementById('ar-fire');
+
+    // Função auxiliar para processar ação de tiro/interação
+    const handleFireAction = () => {
         const scene = document.getElementById('ar-scene');
         const combat = scene?.systems['combat'];
         const weapon = GameData.equipped.weapon;
 
-        // Reproduzir animação da arma (se tiver arma equipada)
-        if (weapon) {
-            playWeaponAnimation(weapon.id);
-        }
+        // Reproduzir animação da arma
+        if (weapon) playWeaponAnimation(weapon.id);
 
         if (combat) {
             const result = combat.fire();
 
-            // Verificar se é um combo ativado
+            // Verificar Exorcismo (Bíblia + Demônio Preso)
+            if (result.hit && result.requiresChanneling) {
+                if (!isExorcising && exorcismAudio) {
+                    // Iniciar exorcismo
+                    exorcismAudio.currentTime = 0;
+                    exorcismAudio.play().catch(e => console.warn("Audio play error", e));
+
+                    isExorcising = true;
+                    currentDemonTarget = result.monsterElement;
+
+                    // Feedback visual
+                    showComboFeedback('📖 Exorcizando... (Segure!)', 'success');
+
+                    // Adicionar handler para fim do áudio
+                    exorcismAudio.onended = () => {
+                        if (isExorcising && currentDemonTarget) {
+                            const monsterComp = currentDemonTarget.components['ar-monster'];
+                            if (monsterComp) {
+                                monsterComp.exorcise(); // Mata o demônio
+                                isExorcising = false;
+                                currentDemonTarget = null;
+                            }
+                        }
+                    };
+                }
+                return;
+            }
+
+            // Ação padrão (Tiro/Dano imediato para outras armas)
             if (result.comboTriggered || result.stateChanged) {
                 showComboFeedback(result.comboMessage, 'success');
             } else {
                 showHitFeedback(result.hit, result.damage, result.isWeakness, result.isImmune, result.immuneReason);
             }
         }
-    });
+    };
+
+    if (fireBtn) {
+        // Pointer DOWN - Inicia ação (suporta toque e mouse)
+        fireBtn.addEventListener('pointerdown', (e) => {
+            // Previne comportamento padrão que pode atrapalhar o hold
+            if (e.cancelable) e.preventDefault();
+
+            if (fireDebounce) return;
+
+            const weapon = GameData.equipped.weapon;
+
+            // Se for Bíblia, inicia ação imediatamente (exorcismo, sem cooldown longo no início)
+            if (weapon && weapon.id === 'bible') {
+                handleFireAction();
+            } else {
+                // Outras armas: Debounce padrão
+                fireDebounce = true;
+                setTimeout(() => { fireDebounce = false; }, FIRE_COOLDOWN);
+                handleFireAction();
+            }
+        });
+
+        // Pointer UP/CANCEL/LEAVE - Para ação contínua (Exorcismo)
+        const stopExorcism = (e) => {
+            if (isExorcising) {
+                if (e.cancelable) e.preventDefault();
+                if (exorcismAudio) {
+                    exorcismAudio.pause();
+                    exorcismAudio.currentTime = 0;
+                }
+                isExorcising = false;
+                currentDemonTarget = null;
+                showComboFeedback('Exorcismo interrompido!', 'warning');
+            }
+        };
+
+        fireBtn.addEventListener('pointerup', stopExorcism);
+        fireBtn.addEventListener('pointerleave', stopExorcism);
+        fireBtn.addEventListener('pointercancel', stopExorcism);
+        fireBtn.addEventListener('contextmenu', e => e.preventDefault());
+    }
 
     document.getElementById('ar-spawn')?.addEventListener('click', () => {
         const scene = document.getElementById('ar-scene');
