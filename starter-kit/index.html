@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0a">
+  
+  <!-- SEO -->
+  <title>Meu Jogo AR - Starter Kit</title>
+  <meta name="description" content="Um jogo de realidade aumentada incrível">
+  
+  <!-- A-Frame (Motor 3D/AR) -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+  <!-- Google Fonts (Personalize conforme necessário) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Maps (Para geolocalização) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Estilos do Jogo -->
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+
+<body>
+  <!-- ========================================
+       TELA: SPLASH (Loading)
+       ======================================== -->
+  <div id="screen-splash" class="screen active">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <h1>🎮</h1>
+        <h2>MEU JOGO AR</h2>
+      </div>
+      <div class="splash-loading">
+        <div class="loading-bar">
+          <div class="loading-fill" id="splash-progress"></div>
+        </div>
+        <p class="loading-text" id="splash-status">Carregando...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: HOME (Menu Principal)
+       ======================================== -->
+  <div id="screen-home" class="screen hidden">
+    <div class="home-header">
+      <div class="player-info">
+        <div class="player-avatar">👤</div>
+        <div class="player-details">
+          <span class="player-name" id="player-name">Jogador</span>
+          <span class="player-level" id="player-level">Nível 1</span>
+        </div>
+      </div>
+      <button class="btn-icon" id="btn-profile">⚙️</button>
+    </div>
+
+    <div class="home-title">
+      <h2>Menu Principal</h2>
+    </div>
+
+    <div class="home-menu">
+      <!-- Botão Principal - Iniciar Jogo -->
+      <button class="menu-card primary" id="btn-start-game">
+        <span class="card-icon">🎯</span>
+        <span class="card-text">JOGAR</span>
+      </button>
+
+      <!-- Grid de Menus Secundários -->
+      <div class="menu-grid">
+        <button class="menu-card" id="btn-map">
+          <span class="card-icon">🗺️</span>
+          <span class="card-text">Mapa</span>
+        </button>
+        <button class="menu-card" id="btn-inventory">
+          <span class="card-icon">🎒</span>
+          <span class="card-text">Inventário</span>
+        </button>
+        <button class="menu-card" id="btn-bestiary">
+          <span class="card-icon">📖</span>
+          <span class="card-text">Enciclopédia</span>
+        </button>
+        <button class="menu-card" id="btn-quests">
+          <span class="card-icon">📜</span>
+          <span class="card-text">Missões</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Estatísticas do Jogador -->
+    <div class="home-stats">
+      <div class="stat-item">
+        <span class="stat-value" id="stat-enemies">0</span>
+        <span class="stat-label">Inimigos</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-games">0</span>
+        <span class="stat-label">Partidas</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-items">0</span>
+        <span class="stat-label">Itens</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: MAPA
+       ======================================== -->
+  <div id="screen-map" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-map">←</button>
+      <h2>🗺️ Mapa</h2>
+    </div>
+    <div class="map-container" id="map-container">
+      <div id="full-map"></div>
+    </div>
+    <div class="map-legend">
+      <div class="legend-item"><span class="dot red"></span> Inimigos</div>
+      <div class="legend-item"><span class="dot yellow"></span> Itens</div>
+      <div class="legend-item"><span class="dot blue"></span> Você</div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: INVENTÁRIO
+       ======================================== -->
+  <div id="screen-inventory" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-inventory">←</button>
+      <h2>🎒 Inventário</h2>
+    </div>
+    
+    <!-- Tabs de Categorias -->
+    <div class="inventory-tabs">
+      <button class="inv-tab active" data-tab="weapons">⚔️ Armas</button>
+      <button class="inv-tab" data-tab="accessories">🔧 Acessórios</button>
+      <button class="inv-tab" data-tab="healing">💊 Cura</button>
+    </div>
+    
+    <!-- Grid de Itens -->
+    <div class="inventory-content" id="inventory-grid">
+      <!-- Itens renderizados via JS -->
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: ENCICLOPÉDIA (Bestiário)
+       ======================================== -->
+  <div id="screen-bestiary" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-bestiary">←</button>
+      <h2>📖 Enciclopédia</h2>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bestiary-filters">
+      <button class="bestiary-filter active" data-filter="all">Todos</button>
+      <button class="bestiary-filter" data-filter="defeated">Derrotados</button>
+      <button class="bestiary-filter" data-filter="unknown">Desconhecidos</button>
+    </div>
+
+    <!-- Lista de Inimigos -->
+    <div class="bestiary-list" id="bestiary-list">
+      <!-- Inimigos renderizados via JS -->
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div class="enemy-detail-overlay" id="enemy-detail-overlay">
+      <div class="enemy-detail-panel">
+        <button class="enemy-detail-close" id="enemy-detail-close">✕</button>
+
+        <div class="enemy-detail-header">
+          <div class="enemy-detail-icon" id="detail-icon">👾</div>
+          <div class="enemy-detail-title">
+            <h2 id="detail-name">Inimigo</h2>
+            <span class="enemy-detail-type" id="detail-type">Tipo</span>
+          </div>
+          <div class="enemy-detail-danger" id="detail-danger">
+            <span class="danger-label">Perigo</span>
+            <div class="danger-stars" id="detail-stars">⭐⭐⭐</div>
+          </div>
+        </div>
+
+        <div class="enemy-detail-section">
+          <h3>📜 Descrição</h3>
+          <p id="detail-lore">Descrição do inimigo...</p>
+        </div>
+
+        <div class="enemy-detail-section">
+          <h3>⚔️ Fraquezas</h3>
+          <div class="weakness-list" id="detail-weaknesses"></div>
+        </div>
+
+        <div class="enemy-detail-section">
+          <h3>🛡️ Imunidades</h3>
+          <div class="immunity-list" id="detail-immunities"></div>
+        </div>
+
+        <div class="enemy-detail-section tips-section">
+          <h3>💡 Dicas</h3>
+          <p id="detail-tips">Dicas para derrotar...</p>
+        </div>
+
+        <div class="enemy-detail-stats">
+          <div class="detail-stat">
+            <span class="stat-number" id="detail-encounters">0</span>
+            <span class="stat-text">Encontros</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: MISSÕES (Quests)
+       ======================================== -->
+  <div id="screen-quests" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-quests">←</button>
+      <h2>📜 Missões</h2>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="quest-tabs">
+      <button class="quest-tab active" data-tab="active">Ativas</button>
+      <button class="quest-tab" data-tab="available">Disponíveis</button>
+      <button class="quest-tab" data-tab="completed">Completas</button>
+    </div>
+    
+    <!-- Lista de Missões -->
+    <div class="quest-list" id="quest-list">
+      <!-- Missões renderizadas via JS -->
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: PERFIL / CONFIGURAÇÕES
+       ======================================== -->
+  <div id="screen-profile" class="screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="btn-back-profile">←</button>
+      <h2>⚙️ Configurações</h2>
+    </div>
+    
+    <div class="profile-content">
+      <!-- Perfil do Jogador -->
+      <div class="profile-card">
+        <div class="profile-avatar">👤</div>
+        <input type="text" class="profile-name-input" id="profile-name-input" placeholder="Nome do Jogador" value="Jogador">
+      </div>
+
+      <!-- Estatísticas -->
+      <div class="profile-stats">
+        <h3>Estatísticas</h3>
+        <div class="stat-row">
+          <span>Inimigos derrotados</span>
+          <span id="profile-enemies">0</span>
+        </div>
+        <div class="stat-row">
+          <span>Partidas jogadas</span>
+          <span id="profile-games">0</span>
+        </div>
+        <div class="stat-row">
+          <span>Itens coletados</span>
+          <span id="profile-items">0</span>
+        </div>
+      </div>
+
+      <!-- Configurações -->
+      <div class="profile-settings">
+        <h3>Configurações</h3>
+        <div class="setting-row">
+          <span>Som</span>
+          <label class="toggle">
+            <input type="checkbox" id="setting-sound" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span>Vibração</span>
+          <label class="toggle">
+            <input type="checkbox" id="setting-vibration" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Ações -->
+      <div class="profile-actions">
+        <button class="btn-danger" id="btn-reset-game">🗑️ Resetar Progresso</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       TELA: MODO AR (Jogo)
+       ======================================== -->
+  <div id="screen-game" class="screen hidden">
+    <!-- A-Frame Scene -->
+    <a-scene id="ar-scene" 
+      vr-mode-ui="enabled: false" 
+      embedded
+      webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay, anchors; overlayElement: #ar-hud;"
+      renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;" 
+      background="color: transparent"
+      ar-hit-test="target: #reticle; type: footprint;">
+
+      <!-- Assets (Modelos 3D) -->
+      <a-assets>
+        <!-- Adicione seus modelos 3D aqui -->
+        <!-- Exemplo:
+        <a-asset-item id="enemy-model" src="/models/enemy.glb"></a-asset-item>
+        <a-asset-item id="item-model" src="/models/item.glb"></a-asset-item>
+        -->
+      </a-assets>
+
+      <!-- Iluminação -->
+      <a-light type="ambient" color="#fff" intensity="0.6"></a-light>
+      <a-light type="directional" color="#fff" intensity="0.9" position="1 4 3"></a-light>
+
+      <!-- Reticle (Indicador de posicionamento) -->
+      <a-entity id="reticle" visible="false">
+        <a-ring color="#00ff00" radius-inner="0.04" radius-outer="0.06" rotation="-90 0 0"
+          material="shader: flat; opacity: 0.8;"></a-ring>
+      </a-entity>
+
+      <!-- Container de Entidades do Jogo -->
+      <a-entity id="entities-container"></a-entity>
+
+      <!-- Câmera -->
+      <a-entity id="camera-rig">
+        <a-camera id="camera" position="0 1.6 0"></a-camera>
+      </a-entity>
+    </a-scene>
+
+    <!-- Overlay de Filtro de Câmera (para efeitos especiais) -->
+    <div id="camera-filter-overlay" class="camera-filter-overlay"></div>
+
+    <!-- HUD do Modo AR -->
+    <div id="ar-hud" class="ar-hud">
+      <!-- Imagem da arma equipada (fundo) -->
+      <div class="ar-weapon-image" id="ar-weapon-image" style="display: none;">
+        <img id="ar-weapon-img" src="" alt="">
+      </div>
+
+      <!-- Botão Sair -->
+      <button class="ar-btn-exit" id="ar-exit">✕</button>
+
+      <!-- HP do Jogador -->
+      <div class="ar-player-hp">
+        <span class="hp-icon">❤️</span>
+        <div class="hp-bar">
+          <div class="hp-fill" id="ar-player-hp-fill"></div>
+        </div>
+        <span class="hp-text" id="ar-player-hp-text">100/100</span>
+      </div>
+
+      <!-- HP do Inimigo -->
+      <div class="ar-enemy-hp" id="ar-enemy-hp">
+        <div class="enemy-hp-info">
+          <div class="hp-bar">
+            <div class="hp-fill enemy" id="ar-enemy-hp-fill"></div>
+          </div>
+          <span class="enemy-name" id="ar-enemy-name">Inimigo</span>
+        </div>
+        <span class="enemy-hp-icon" id="ar-enemy-icon">👾</span>
+      </div>
+
+      <!-- Mira -->
+      <div class="ar-crosshair"></div>
+      
+      <!-- Feedback de Acerto -->
+      <div class="ar-hit-feedback" id="ar-hit-feedback"></div>
+
+      <!-- Tracker de Missão Atual -->
+      <div class="ar-quest-tracker" id="ar-quest-tracker">
+        <!-- Objetivo da quest atual será renderizado via JS -->
+      </div>
+
+      <!-- Slots de Equipamento -->
+      <div class="ar-slots">
+        <div class="ar-slot weapon" id="ar-slot-weapon" data-type="weapon">⚔️</div>
+        <div class="ar-slot accessory" id="ar-slot-accessory" data-type="accessory">🔧</div>
+        <div class="ar-slot healing" id="ar-slot-healing" data-type="healing">💊</div>
+      </div>
+
+      <!-- Botão de Ação/Ataque -->
+      <button class="ar-btn-fire" id="ar-fire">🎯</button>
+
+      <!-- Modal de Inventário Rápido -->
+      <div class="ar-inventory-modal" id="ar-inventory-modal">
+        <div class="ar-inv-header">
+          <span>Equipar Item</span>
+          <button id="ar-inv-close">✕</button>
+        </div>
+        <div class="ar-inv-grid" id="ar-inv-grid"></div>
+      </div>
+    </div>
+    
+    <!-- Elementos de Áudio -->
+    <audio id="audio-hit" src="/audio/hit.mp3" preload="auto"></audio>
+    <audio id="audio-miss" src="/audio/miss.mp3" preload="auto"></audio>
+    <audio id="audio-victory" src="/audio/victory.mp3" preload="auto"></audio>
+  </div>
+
+  <!-- Script Principal -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

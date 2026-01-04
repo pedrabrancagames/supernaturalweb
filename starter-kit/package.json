@@ -1,0 +1,24 @@
+{
+    "name": "ar-game-starter-kit",
+    "version": "1.0.0",
+    "description": "Kit inicial para criar jogos de Realidade Aumentada (AR) para web",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "keywords": [
+        "ar",
+        "augmented-reality",
+        "webxr",
+        "aframe",
+        "game",
+        "starter-kit"
+    ],
+    "author": "Pedra Branca Games",
+    "license": "MIT",
+    "devDependencies": {
+        "vite": "^6.0.7"
+    }
+}
