@@ -1800,33 +1800,32 @@ AFRAME.registerComponent('ar-monster', {
     tick: function (time, deltaTime) {
         if (!deltaTime) return;
         const dt = deltaTime / 1000;
-        const camera = document.getElementById('camera');
-        if (!camera) return;
-        const cameraPos = camera.getAttribute('position');
 
-        // Movimento circular e levitação apenas para fantasmas
-        if (this.data.type === 'ghost') {
-            // Se está preso, não se move
-            if (this.monsterState === 'trapped') return;
-
-            this.ghostOrbitAngle += this.ghostOrbitSpeed * dt;
-            const newX = cameraPos.x + Math.cos(this.ghostOrbitAngle) * this.ghostOrbitRadius;
-            const newZ = cameraPos.z + Math.sin(this.ghostOrbitAngle) * this.ghostOrbitRadius;
-
-            this.ghostHoverOffset += dt * 2;
-            const hoverY = this.ghostBaseY + Math.sin(this.ghostHoverOffset) * 0.3;
-
-            this.el.setAttribute('position', { x: newX, y: hoverY, z: newZ });
+        // Salvar posição base na primeira execução (para manter monstro fixo)
+        if (!this.basePosition) {
+            const pos = this.el.getAttribute('position');
+            this.basePosition = { x: pos.x, y: pos.y, z: pos.z };
         }
 
-        // Funcionalidade de olhar para o jogador desativada temporariamente
-        // if (this.monsterState !== 'dead') { ... }
+        // MONSTROS FICAM FIXOS NO LUGAR - apenas efeitos visuais sutis
+        
+        // Levitação sutil apenas para fantasmas (apenas no eixo Y, posição X/Z fixa)
+        if (this.data.type === 'ghost' && this.monsterState !== 'trapped' && this.monsterState !== 'dead') {
+            this.ghostHoverOffset += dt * 2;
+            const hoverY = this.basePosition.y + Math.sin(this.ghostHoverOffset) * 0.2;
+            // Mantém X e Z fixos, apenas Y muda levemente
+            this.el.setAttribute('position', { 
+                x: this.basePosition.x, 
+                y: hoverY, 
+                z: this.basePosition.z 
+            });
+        }
 
-        // Animação de tremida para monstros presos
+        // Animação de tremida para monstros presos - usar rotação ao invés de posição
+        // Isso evita que o monstro "drift" enquanto tremendo
         if (this.monsterState === 'trapped') {
-            const shake = Math.sin(time * 0.02) * 0.05;
-            const currentPos = this.el.getAttribute('position');
-            this.el.setAttribute('position', { x: currentPos.x + shake, y: currentPos.y, z: currentPos.z });
+            const shake = Math.sin(time * 0.02) * 3; // graus de rotação
+            this.el.setAttribute('rotation', { x: 0, y: this.rotationOffset || 0, z: shake });
         }
 
         // Animação de queimando
